@@ -1,0 +1,15 @@
+add_library(libSceSystemGesture SHARED EXCLUDE_FROM_ALL Export.cpp)
+target_include_directories(libSceSystemGesture PRIVATE ${LIBS_INCLUDE_DIR})
+configure_windows_unwind(libSceSystemGesture)
+
+if(BUILD_TESTING)
+    add_test_executable(guest_system_gesture_tests ${LIBS_INCLUDE_DIR}/tests/GuestSystemGesture.cpp)
+    target_include_directories(guest_system_gesture_tests PRIVATE ${LIBS_INCLUDE_DIR})
+    target_link_libraries(guest_system_gesture_tests PRIVATE libSceSystemGesture libc)
+    configure_windows_unwind(guest_system_gesture_tests)
+    add_test(NAME guest_system_gesture COMMAND guest_system_gesture_tests)
+    if(WIN32)
+        set_tests_properties(guest_system_gesture PROPERTIES ENVIRONMENT_MODIFICATION
+            "PATH=path_list_prepend:$<TARGET_FILE_DIR:libSceSystemGesture>")
+    endif()
+endif()

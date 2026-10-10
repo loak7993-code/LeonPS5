@@ -4,6 +4,8 @@ A tool that ports PlayStation 5 executables to run natively on Linux, Windows an
 
 A [relinker](core/relinker) converts the executable and its bundled modules to the target system's native format. Implementations of the [system prx libraries](core/libs/prx) provide the imports the converted program binds to at load time, each renamed to its NID so the OS loader resolves them without any patching.
 
+> **Vibe coded.** This fork is developed end to end with an AI agent: the code, the tests and the docs. Every change ships with the 699-test suite green, the conventions checker clean and its unverified-on-console details documented in [Technical debt](docs/dev/TechnicalDebt.md).
+
 ## Features
 
 - One command from game directory to running game: `leonps5 <game-directory-or-elf>` converts, assembles the runtime layout and launches.

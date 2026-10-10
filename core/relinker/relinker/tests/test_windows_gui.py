@@ -16,7 +16,7 @@ def subsystem(pe):
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-gui-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-gui-") as directory:
         work = Path(directory)
         source = work / "input.elf"
         source.write_bytes(fixture())

@@ -12,7 +12,7 @@ class FrameTiming;
 
 inline constexpr std::uint32_t FlipPacketHeader = 0xc004105cu;
 inline constexpr std::uint32_t FlipPacketWords = 6;
-// AnyPS5's internal encoding for the driver-generated rendering wait.
+// LeonPS5's internal encoding for the driver-generated rendering wait.
 inline constexpr std::uint32_t RenderingWaitPacketHeader = 0xc0021018u;
 inline constexpr std::uint32_t RenderingWaitPacketWords = 4;
 

@@ -52,11 +52,11 @@ def dynstr_section_size(elf):
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-dynstr-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-dynstr-") as directory:
         source = Path(directory) / "input.elf"
         source.write_bytes(fixture())
         for name, options, expected in (("default", [], b"$ORIGIN/libs"),
-                                        ("custom", ["--rpath", "/opt/anyps5/lib"], b"/opt/anyps5/lib")):
+                                        ("custom", ["--rpath", "/opt/leonps5/lib"], b"/opt/leonps5/lib")):
             output = Path(directory) / (name + ".elf")
             result = subprocess.run([str(relinker), "--skip-sce-module", *options, str(source), str(output)],
                                     capture_output=True, text=True, timeout=20)

@@ -10,7 +10,7 @@ from test_dynamic_segment import fixture
 def main():
     relinker = Path(sys.argv[1]).resolve()
     failures = []
-    with tempfile.TemporaryDirectory(prefix="anyps5-rela-size-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-rela-size-") as directory:
         work = Path(directory)
         for tag in (8, 0x61000031):
             for size in (0, 1, 23, 24, 25, 47, 48, 0xffffffffffffffff):

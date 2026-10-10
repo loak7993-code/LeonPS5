@@ -35,7 +35,7 @@ static std::vector<char> Read(const std::filesystem::path& path) {
 int main(int argc, char**) {
     const auto previousDirectory = std::filesystem::current_path();
     const auto root = std::filesystem::temp_directory_path() /
-        ("anyps5-save-growth-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        ("leonps5-save-growth-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     Require(std::filesystem::create_directory(root));
     std::filesystem::current_path(root);
     const auto path = std::filesystem::path("_sd_mem/u7531/slot0.bin");

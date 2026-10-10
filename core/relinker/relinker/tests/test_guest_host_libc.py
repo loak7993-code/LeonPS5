@@ -43,7 +43,7 @@ def convert(relinker, case, libraries, modules, options=()):
 def main():
     relinker = Path(sys.argv[1]).resolve()
     imports = ("libkernel.prx", "libc.prx", "libSceLibcInternal.prx")
-    with tempfile.TemporaryDirectory(prefix="anyps5-guest-host-libc-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-guest-host-libc-") as directory:
         work = Path(directory)
 
         needed = convert(relinker, work / "bundled", imports, ["libc.prx", "other.prx"])

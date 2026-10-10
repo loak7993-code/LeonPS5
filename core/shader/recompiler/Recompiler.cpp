@@ -35,7 +35,7 @@
 #include "Optimization/include/Optimization/SrtWalker.hpp"
 #include "Optimization/include/Optimization/SsaBuilder.hpp"
 #include "SpirvBackend/include/SpirvBackend/SpirvEmitter.hpp"
-#if ANYPS5_ENABLE_SPIRV_TOOLS
+#if LEONPS5_ENABLE_SPIRV_TOOLS
 #include "SpirvBackend/SpirvOptimizer.hpp"
 #endif
 #include "SpirvBackend/SpirvMemory/SpirvInputOutput.hpp"
@@ -381,7 +381,7 @@ CompiledVariant compileVariant(const RecompileRequest& request, IrProgram progra
 
     const bool embedded = !result.vertexInputs.empty() && inputInfo.vertex != nullptr && inputInfo.vertex->fetchEmbedded;
     if (embedded) PrepareVertexInputSpecialization(result);
-#if ANYPS5_ENABLE_SPIRV_TOOLS
+#if LEONPS5_ENABLE_SPIRV_TOOLS
     result.spirv = ValidateAndOptimizeSpirv(result.spirv, request.target.vulkanVersion, request.target.spirvVersion, request.target.nonConstantImageOffsets, !embedded);
     if (embedded) {
         std::array<std::uint32_t, ShaderVertexStageInfo::MaxResources> classes{};
@@ -440,7 +440,7 @@ std::shared_ptr<const SpecializedModule> buildSpecializedModule(const CompiledSh
         cursor += count;
     }
     materialized = SpecializeSpirv(materialized);
-#if ANYPS5_ENABLE_SPIRV_TOOLS
+#if LEONPS5_ENABLE_SPIRV_TOOLS
     materialized = ValidateAndOptimizeSpirv(materialized, target.vulkanVersion, target.spirvVersion, target.nonConstantImageOffsets, true, true);
 #endif
     std::map<std::uint32_t, std::uint32_t> descriptorVariables;
@@ -473,7 +473,7 @@ std::shared_ptr<const SpecializedModule> buildSpecializedModule(const CompiledSh
         cursor += count;
     }
     materialized = std::move(compact);
-#if ANYPS5_ENABLE_SPIRV_TOOLS
+#if LEONPS5_ENABLE_SPIRV_TOOLS
     materialized = ValidateAndOptimizeSpirv(materialized, target.vulkanVersion, target.spirvVersion, target.nonConstantImageOffsets, false);
 #endif
     auto module = std::make_shared<SpecializedModule>();

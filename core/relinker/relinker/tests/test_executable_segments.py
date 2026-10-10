@@ -49,7 +49,7 @@ def run_case(relinker: Path, work: Path, name: str, args, code: bytes, with_impo
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-executable-segments-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-executable-segments-") as directory:
         work = Path(directory)
         result, output = run_case(relinker, work, "syscall", [], b"\x0f\x05\xc3")
         assert result.returncode == 2 and "Forbidden syscall instruction" in result.stderr and not output.exists(), result

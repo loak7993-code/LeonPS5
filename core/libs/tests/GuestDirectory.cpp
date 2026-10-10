@@ -16,7 +16,7 @@ int* APS5_VABI __error_nid_postfix();
 }
 static void Require(bool value) { if (!value) std::abort(); }
 int main() {
-    const auto root = std::filesystem::path("anyps5-directory-test-" +
+    const auto root = std::filesystem::path("leonps5-directory-test-" +
         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     Require(std::filesystem::create_directory(root));
     Require(std::filesystem::create_directory(root / "subdirectory"));

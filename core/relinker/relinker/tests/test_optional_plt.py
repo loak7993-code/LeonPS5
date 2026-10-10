@@ -31,7 +31,7 @@ def fixture(extra_tags=()):
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-plt-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-plt-") as directory:
         work = Path(directory)
 
         def convert(name, tags=(), error=None):

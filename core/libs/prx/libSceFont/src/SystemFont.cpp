@@ -110,11 +110,11 @@ std::vector<Font::SystemFontFile> Font::SystemFontCandidates(std::uint32_t fontS
 }
 
 std::filesystem::path Font::SystemFontDirectory() {
-    const char* configured = std::getenv("ANYPS5_SYSTEM_FONTS");
-    if (!configured || configured[0] == '\0') return ExecutableDirectory() / "anyps5-fonts";
+    const char* configured = std::getenv("LEONPS5_SYSTEM_FONTS");
+    if (!configured || configured[0] == '\0') return ExecutableDirectory() / "leonps5-fonts";
     const std::filesystem::path directory(configured);
     std::error_code error;
-    if (!std::filesystem::is_directory(directory, error)) throw std::runtime_error("libSceFont: ANYPS5_SYSTEM_FONTS is not a directory: " + directory.string());
+    if (!std::filesystem::is_directory(directory, error)) throw std::runtime_error("libSceFont: LEONPS5_SYSTEM_FONTS is not a directory: " + directory.string());
     return directory;
 }
 

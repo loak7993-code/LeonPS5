@@ -87,7 +87,7 @@ int main() {
     Require(std::memcmp(received, payload, sizeof(payload)) == 0);
     Require(read_nid_postfix(descriptors[0], received, sizeof(received)) == 0);
     Require(close_nid_postfix(descriptors[0]) == 0);
-    const auto root = std::filesystem::path("anyps5-filesystem-test-" +
+    const auto root = std::filesystem::path("leonps5-filesystem-test-" +
         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     Require(mkdir_nid_postfix(root.string().c_str(), 0700) == 0);
     Require(mkdir_nid_postfix(root.string().c_str(), 0700) == -1 && *__error_nid_postfix() == 17);

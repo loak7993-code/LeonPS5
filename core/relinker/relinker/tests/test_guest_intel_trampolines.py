@@ -112,7 +112,7 @@ def check_rip_trampoline(read, site_address):
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-guest-intel-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-guest-intel-") as directory:
         work = Path(directory)
         for windows in (False, True):
             for kind, site in CASES:

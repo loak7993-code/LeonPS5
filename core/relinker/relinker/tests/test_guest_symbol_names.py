@@ -114,7 +114,7 @@ def convert(relinker, case):
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-guest-symbol-names-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-guest-symbol-names-") as directory:
         work = Path(directory)
 
         output = convert(relinker, work)

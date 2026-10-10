@@ -39,7 +39,7 @@ static void Require(bool value, int line) {
 }
 #define Check(value) Require((value), __LINE__)
 int main() {
-    const auto root = std::filesystem::path("anyps5-aio-test-" +
+    const auto root = std::filesystem::path("leonps5-aio-test-" +
         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     Check(std::filesystem::create_directory(root));
     const auto file = root / "data.bin";

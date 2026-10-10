@@ -209,9 +209,9 @@ void CheckTriangles(const char* what) {
 int main() {
     try {
 #ifdef _WIN32
-        _putenv_s("ANYPS5_NO_SHADER_CACHE", "1");
+        _putenv_s("LEONPS5_NO_SHADER_CACHE", "1");
 #else
-        setenv("ANYPS5_NO_SHADER_CACHE", "1", 1);
+        setenv("LEONPS5_NO_SHADER_CACHE", "1", 1);
 #endif
         for (std::uint32_t triangle = 0; triangle < Triangles; ++triangle) {
             const auto vertices = TriangleVertices(triangle);

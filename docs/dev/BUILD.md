@@ -5,7 +5,7 @@
 The relinker can be built without initializing submodules or configuring SDL, Vulkan, FFmpeg, FreeType or the shader recompiler. It requires CMake, a C++20 compiler and a build tool. Python 3 enables the Python regression tests.
 
 ```sh
-cmake -S . -B build-relinker -G Ninja -DCMAKE_BUILD_TYPE=Release -DANYPS5_RELINKER_ONLY=ON -DBUILD_TESTING=ON
+cmake -S . -B build-relinker -G Ninja -DCMAKE_BUILD_TYPE=Release -DLEONPS5_RELINKER_ONLY=ON -DBUILD_TESTING=ON
 cmake --build build-relinker --parallel
 ctest --test-dir build-relinker --output-on-failure
 ```
@@ -47,11 +47,11 @@ library change without it therefore tests the previous binaries and can show no 
 ## One-command runner
 
 ```sh
-cmake --build build --target anyps5 --parallel
-./build/core/runner/anyps5 <game-directory-or-elf>
+cmake --build build --target leonps5 --parallel
+./build/core/runner/leonps5 <game-directory-or-elf>
 ```
 
-`anyps5` relinks the game, assembles the `libs/` and `app0/` runtime layout from the build tree and
+`leonps5` relinks the game, assembles the `libs/` and `app0/` runtime layout from the build tree and
 launches the converted executable; see [Usage](../user/USAGE.md).
 
 ## CMake flags
@@ -61,8 +61,8 @@ Project switches accept `ON` or `OFF`:
 | Flag                             | Default | Effect                                           |
 |----------------------------------|---------|--------------------------------------------------|
 | `-DBUILD_TESTING=ON`             | `OFF`   | Build and register tests.                        |
-| `-DANYPS5_RELINKER_ONLY=ON`      | `OFF`   | Build only the relinker and its tests, without third-party dependencies. |
-| `-DANYPS5_ENABLE_SPIRV_TOOLS=ON` | `OFF`   | Enable SPIR-V validation and optimization.       |
+| `-DLEONPS5_RELINKER_ONLY=ON`      | `OFF`   | Build only the relinker and its tests, without third-party dependencies. |
+| `-DLEONPS5_ENABLE_SPIRV_TOOLS=ON` | `OFF`   | Enable SPIR-V validation and optimization.       |
 | `-DAPS5_ENABLE_TIMING_LOG=ON`    | `OFF`   | Compile frame timing logging.                    |
 | `-DAPS5_AGC_CREATE_LOG=OFF`      | `ON`    | Disable successful `sceAgcCreateShader` logging. |
 | `-DAGC_BUILD_VISUAL_TEST=ON`     | `OFF`   | Build the standalone AGC SPIR-V visual test.     |

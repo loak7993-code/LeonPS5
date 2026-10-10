@@ -157,7 +157,7 @@ int Run(const Options& options) {
     try {
         input = ResolveInput(options.input);
         ResolveModuleDirectory(input.directory);
-        outputDirectory = options.output.empty() ? input.directory / "anyps5-out" : options.output;
+        outputDirectory = options.output.empty() ? input.directory / "leonps5-out" : options.output;
         std::filesystem::create_directories(outputDirectory);
         outputExecutable = outputDirectory / (options.toWindows ? "app.exe" : "app.elf");
     } catch (const std::invalid_argument& e) {

@@ -56,7 +56,7 @@ static int Collect(const char* buffer, int bytes, std::map<std::string, Entry>& 
 }
 
 int main() {
-    const auto root = std::filesystem::path("anyps5-directory-entries-test-" +
+    const auto root = std::filesystem::path("leonps5-directory-entries-test-" +
         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     Require(std::filesystem::create_directory(root));
     const std::string longName = "a-much-longer-entry-name-0123456789";

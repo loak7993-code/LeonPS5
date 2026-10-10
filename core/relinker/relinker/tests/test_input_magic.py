@@ -8,7 +8,7 @@ import tempfile
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-magic-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-magic-") as directory:
         work = Path(directory)
 
         def convert(name, content, error):

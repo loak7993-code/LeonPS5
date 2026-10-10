@@ -239,7 +239,7 @@ int main() {
         try {
             device = std::make_unique<Device>();
         } catch (const std::exception& error) {
-            if (std::getenv("ANYPS5_REQUIRE_VULKAN") != nullptr) throw;
+            if (std::getenv("LEONPS5_REQUIRE_VULKAN") != nullptr) throw;
             std::printf("skipped, no usable Vulkan device: %s\n", error.what());
             return VulkanTestSkipped;
         }

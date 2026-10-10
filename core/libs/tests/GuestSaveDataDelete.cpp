@@ -73,7 +73,7 @@ bool ReadMountedFile(std::array<char, 32>& buffer, std::size_t expectedSize) {
 }
 
 int main() {
-    const auto root = std::filesystem::temp_directory_path() / ("anyps5-savedata-delete-" + std::to_string(std::random_device{}()));
+    const auto root = std::filesystem::temp_directory_path() / ("leonps5-savedata-delete-" + std::to_string(std::random_device{}()));
     const auto work = root / "work";
     const auto kept = work / "_sd" / "kept" / "data.bin";
     const auto victim = work / "victim" / "important.txt";

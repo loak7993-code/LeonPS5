@@ -20,7 +20,7 @@ namespace RelinkerTests {
 class TempDirectory {
 public:
     TempDirectory() {
-        auto pattern = (std::filesystem::temp_directory_path() / "anyps5-relinker-XXXXXX").string();
+        auto pattern = (std::filesystem::temp_directory_path() / "leonps5-relinker-XXXXXX").string();
         if (mkdtemp(pattern.data()) == nullptr) throw std::runtime_error("Cannot create a temporary directory");
         path = pattern;
     }

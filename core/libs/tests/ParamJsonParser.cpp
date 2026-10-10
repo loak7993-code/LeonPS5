@@ -91,7 +91,7 @@ static void CheckNumberSyntax(const std::filesystem::path& path) {
 }
 
 int main() {
-    const auto path = std::filesystem::temp_directory_path() / ("anyps5-param-json-" +
+    const auto path = std::filesystem::temp_directory_path() / ("leonps5-param-json-" +
         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + ".json");
     int result = 0;
     try {

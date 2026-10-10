@@ -90,7 +90,7 @@ static bool CheckFileBytes(const std::string& filename, const std::string& expec
 }
 
 static bool CheckBinaryModes() {
-    const auto directory = "anyps5-byte-stream-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const auto directory = "leonps5-byte-stream-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
     Require(std::filesystem::create_directory(directory));
     const auto filename = directory + "/bytes";
     const std::string original("A\r\n\x1a" "B\0C", 7);
@@ -278,7 +278,7 @@ int main() {
     Require(!feof_nid_postfix(&positioned));
     positioned.Close();
 
-    const auto filename = "anyps5-reopen-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const auto filename = "leonps5-reopen-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
     FileStream redirected(std::tmpfile());
     Require(fgetc_nid_postfix(&redirected) == EOF && feof_nid_postfix(&redirected));
     Require(freopen_nid_postfix(filename.c_str(), "w+b", &redirected) == &redirected);

@@ -390,7 +390,7 @@ def add_alias(image, size, begin=0x1200):
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-tls-coverage-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-tls-coverage-") as directory:
         work = Path(directory)
 
         def convert(name, image, error=None, tls_address=0x1240, displacement=0, error_offset=None):

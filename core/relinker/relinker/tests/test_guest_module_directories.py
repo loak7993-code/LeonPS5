@@ -50,7 +50,7 @@ def needed_libraries(image):
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-module-directories-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-module-directories-") as directory:
         work = Path(directory)
 
         def convert(case, windows, options=()):

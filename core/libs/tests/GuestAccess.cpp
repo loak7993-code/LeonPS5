@@ -19,7 +19,7 @@ int* APS5_VABI __error_nid_postfix();
 static void Require(bool value) { if (!value) std::abort(); }
 
 int main() {
-    const auto name = "anyps5-access-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const auto name = "leonps5-access-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
     const auto directory = std::filesystem::current_path() / name;
     Require(std::filesystem::create_directory(directory));
     const auto file = directory / "sample.txt";

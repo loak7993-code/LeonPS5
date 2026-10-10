@@ -12,7 +12,7 @@ def main():
     relinker = Path(sys.argv[1]).resolve()
     names = ["symbol", 'quote"slash\\', "caf\u00e9-\u007f"]
     names.extend("symbol" + chr(value) for value in range(1, 32))
-    with tempfile.TemporaryDirectory(prefix="anyps5-call-registry-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-call-registry-") as directory:
         work = Path(directory)
         for index, name in enumerate(names):
             strings = b"\0lib.so\0" + name.encode("utf-8") + b"\0"

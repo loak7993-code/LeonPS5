@@ -104,7 +104,7 @@ bool Constant(const std::vector<float>& played, std::size_t first, std::size_t c
 }
 
 void TestReadAtNextPush() {
-    Session session("anyps5_audio_out2_next_push.raw");
+    Session session("leonps5_audio_out2_next_push.raw");
     session.Fill(0.25f);
     session.Point(session.buffer.data());
     Require(sceAudioOut2ContextPush(session.context, 1) == 0);
@@ -124,7 +124,7 @@ void TestReadAtNextPush() {
 }
 
 void TestRecreatedPort() {
-    Session session("anyps5_audio_out2_recreated_port.raw");
+    Session session("leonps5_audio_out2_recreated_port.raw");
     session.Fill(0.5f);
     session.Point(session.buffer.data());
     Require(sceAudioOut2ContextPush(session.context, 1) == 0);
@@ -149,7 +149,7 @@ void TestRecreatedPort() {
 }
 
 void TestLevelExcludesCushion() {
-    Session session("anyps5_audio_out2_level.raw");
+    Session session("leonps5_audio_out2_level.raw");
     session.Point(nullptr);
     std::uint32_t level = 99;
     std::uint32_t available = 99;
@@ -167,7 +167,7 @@ void TestLevelExcludesCushion() {
 }
 
 void TestPrimingAfterRunningDry() {
-    Session session("anyps5_audio_out2_priming.raw");
+    Session session("leonps5_audio_out2_priming.raw");
     session.Fill(0.5f);
     session.Point(session.buffer.data());
     for (std::uint32_t push = 0; push < 12; push++) Require(sceAudioOut2ContextPush(session.context, 1) == 0);

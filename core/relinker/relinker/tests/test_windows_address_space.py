@@ -21,7 +21,7 @@ def dll_characteristics(pe):
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-address-space-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-address-space-") as directory:
         work = Path(directory)
         image = fixture()
         image[0x210:0x218] = bytes.fromhex("4889e0" "48c1e820" "c3")

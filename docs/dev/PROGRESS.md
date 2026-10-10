@@ -20,7 +20,7 @@ Real removals and transitions back to stubs remain visible. Percentages retain t
 
 ```sh
 python3 tools/tests/test_progress.py
-python3 tools/progress.py /tmp/anyps5-progress
+python3 tools/progress.py /tmp/leonps5-progress
 ```
 
 The regressions check that adding test callbacks leaves counts and comparisons unchanged, including when a callback shares a pending function's name or a wrapper uses shared sources. They also create a source library and a copied wrapper, move the wrapper to a shared builder, check output labels and totals, then verify real regressions and removals are still reported. With `BUILD_TESTING=ON` and Python available, CTest registers them as `progress_report`.

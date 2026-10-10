@@ -73,7 +73,7 @@ def run(relinker, work, name, image, expected_error=None):
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-string-table-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-string-table-") as directory:
         work = Path(directory)
         run(relinker, work, "sysv-valid", fixture())
         run(relinker, work, "os-valid", fixture(os_tags=True))

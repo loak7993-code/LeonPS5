@@ -55,7 +55,7 @@ static void VerifyCloseReuse(const std::filesystem::path& root, const char* scen
 
 int main() {
     const auto root = std::filesystem::temp_directory_path() /
-        ("anyps5-directory-close-" +
+        ("leonps5-directory-close-" +
          std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     Require(std::filesystem::create_directory(root));
 

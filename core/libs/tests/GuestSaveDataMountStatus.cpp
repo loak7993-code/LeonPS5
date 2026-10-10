@@ -44,7 +44,7 @@ void MountAndCheck(const char* name, std::uint32_t mode, std::uint32_t expectedS
 }
 
 int main() {
-    const auto root = std::filesystem::temp_directory_path() / ("anyps5-savedata-mount-status-" + std::to_string(std::random_device{}()));
+    const auto root = std::filesystem::temp_directory_path() / ("leonps5-savedata-mount-status-" + std::to_string(std::random_device{}()));
     std::filesystem::create_directories(root);
     const auto previous = std::filesystem::current_path();
     std::filesystem::current_path(root);

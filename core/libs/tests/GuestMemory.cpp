@@ -776,7 +776,7 @@ static void CheckPinnedSharedPages() {
 static void CheckReadsIntoSharedWriteTracking() {
 #ifdef _WIN32
     constexpr std::size_t page = 0x4000;
-    const auto path = std::filesystem::path("anyps5-tracked-read-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + ".bin");
+    const auto path = std::filesystem::path("leonps5-tracked-read-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + ".bin");
     std::vector<char> seed(page * 2);
     for (std::size_t i = 0; i < seed.size(); ++i) seed[i] = static_cast<char>(i * 7 + 1);
     {

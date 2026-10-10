@@ -76,7 +76,7 @@ def run(relinker, work, name, image, expected_error=None):
 def main():
     relinker = Path(sys.argv[1]).resolve()
     error = "Jump relocation table is out of bounds"
-    with tempfile.TemporaryDirectory(prefix="anyps5-jmprel-table-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-jmprel-table-") as directory:
         work = Path(directory)
         run(relinker, work, "os-valid", fixture())
         run(relinker, work, "sysv-valid", fixture(os_tags=False))

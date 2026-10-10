@@ -42,7 +42,7 @@ def loaded_tls_index(path):
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-guest-tls-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-guest-tls-") as directory:
         case = Path(directory)
         module_dir = case / "sce_module"
         module_dir.mkdir()

@@ -93,7 +93,7 @@ def check_extraction(path):
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-icon-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-icon-") as directory:
         work = Path(directory)
         app = work / "app with spaces"
         app.mkdir()

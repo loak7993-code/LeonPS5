@@ -22,14 +22,14 @@ static constexpr uint32_t SKU_FLAG_FULL = 3;
 namespace {
 
 std::filesystem::path EntitlementsPath() {
-    if (const char* configured = std::getenv("ANYPS5_ENTITLEMENTS"); configured != nullptr && configured[0] != '\0') return configured;
+    if (const char* configured = std::getenv("LEONPS5_ENTITLEMENTS"); configured != nullptr && configured[0] != '\0') return configured;
 #ifdef _WIN32
     wchar_t module[MAX_PATH];
     const auto length = GetModuleFileNameW(nullptr, module, MAX_PATH);
     if (length == 0 || length == MAX_PATH) throw std::runtime_error("NpEntitlementAccess: cannot locate the executable");
-    return std::filesystem::path(module).parent_path() / "anyps5-entitlements.ini";
+    return std::filesystem::path(module).parent_path() / "leonps5-entitlements.ini";
 #else
-    return std::filesystem::read_symlink("/proc/self/exe").parent_path() / "anyps5-entitlements.ini";
+    return std::filesystem::read_symlink("/proc/self/exe").parent_path() / "leonps5-entitlements.ini";
 #endif
 }
 
@@ -39,7 +39,7 @@ const std::vector<NpEntitlementAccessAddcontEntitlementInfo>& OwnedAddons() {
         const auto path = EntitlementsPath();
         std::ifstream file(path);
         if (!file) {
-            if (std::getenv("ANYPS5_ENTITLEMENTS") != nullptr || std::filesystem::exists(path)) throw std::runtime_error("NpEntitlementAccess: cannot read " + path.string());
+            if (std::getenv("LEONPS5_ENTITLEMENTS") != nullptr || std::filesystem::exists(path)) throw std::runtime_error("NpEntitlementAccess: cannot read " + path.string());
             return addons;
         }
         std::string line;

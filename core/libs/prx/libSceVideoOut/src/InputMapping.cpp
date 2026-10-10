@@ -127,15 +127,15 @@ Pad::InputBinding parseBinding(const InputAction& action, std::string_view sourc
 
 std::filesystem::path defaultConfigPath() {
     std::unique_ptr<char, decltype(&SDL_free)> basePath(SDL_GetBasePath(), SDL_free);
-    if (basePath) return std::filesystem::path(basePath.get()) / "anyps5-input.ini";
-    return "anyps5-input.ini";
+    if (basePath) return std::filesystem::path(basePath.get()) / "leonps5-input.ini";
+    return "leonps5-input.ini";
 }
 
 }
 
 std::vector<Pad::InputBinding> Pad::LoadInputMapping() {
     std::vector<InputBinding> bindings(InputMapping.begin(), InputMapping.end());
-    const char* configuredPath = std::getenv("ANYPS5_INPUT_CONFIG");
+    const char* configuredPath = std::getenv("LEONPS5_INPUT_CONFIG");
     const bool explicitPath = configuredPath != nullptr && configuredPath[0] != '\0';
     const std::filesystem::path path = explicitPath ? configuredPath : defaultConfigPath();
     std::ifstream file(path);

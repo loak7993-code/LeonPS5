@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
     Require(dlopen_nid_postfix(argv[1], 0x2000) == nullptr);
     Require(dlerror_nid_postfix() != nullptr);
     Require(dlerror_nid_postfix() == nullptr);
-    Require(dlopen_nid_postfix("anyps5-missing-module-for-test.prx", 2) == nullptr);
+    Require(dlopen_nid_postfix("leonps5-missing-module-for-test.prx", 2) == nullptr);
     Require(dlerror_nid_postfix() != nullptr);
     void* executable = dlopen_nid_postfix(nullptr, 2);
     Require(executable != nullptr && dlclose_nid_postfix(executable) == 0);
@@ -65,7 +65,7 @@ int main(int argc, char** argv) {
     Require(dlclose_nid_postfix(second) == 0);
     Require(dlclose_nid_postfix(second) == -1);
 
-    const std::filesystem::path guest = "anyps5-relinked-module-for-test.prx";
+    const std::filesystem::path guest = "leonps5-relinked-module-for-test.prx";
     auto relinked = guest;
     relinked += ".guest.prx";
     {
@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
     Require(dlsym_nid_postfix(nullptr, "pthread_create") == nullptr);
     Require(dlsym_nid_postfix(nullptr, "GuestDefaultScopeOnly") == reinterpret_cast<void*>(&GuestDefaultScopeOnly));
     Require(dlsym_nid_postfix(reinterpret_cast<void*>(-2), "GuestDefaultScopeOnly") == reinterpret_cast<void*>(&GuestDefaultScopeOnly));
-    const auto hostLoaded = std::filesystem::absolute("anyps5-host-loaded-module-for-test.prx");
+    const auto hostLoaded = std::filesystem::absolute("leonps5-host-loaded-module-for-test.prx");
     std::filesystem::copy_file(argv[1], hostLoaded, std::filesystem::copy_options::overwrite_existing);
     void* host = ::dlopen(hostLoaded.c_str(), RTLD_NOW | RTLD_GLOBAL);
     Require(host != nullptr);

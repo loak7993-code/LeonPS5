@@ -14,7 +14,7 @@ def main():
         ("load-offset", 64 + 8, "Segment offset out of bounds (offset 0xffffffffffffffff)"),
         ("dynamic-offset", 120 + 8, "Dynamic segment out of bounds (offset 0xffffffffffffffff)"),
     ]
-    with tempfile.TemporaryDirectory(prefix="anyps5-elf-offsets-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-elf-offsets-") as directory:
         for name, field, error in cases:
             source = Path(directory) / (name + ".elf")
             data = fixture()

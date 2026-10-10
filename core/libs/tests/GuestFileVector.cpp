@@ -56,7 +56,7 @@ static std::string Contents(const std::filesystem::path& path) {
 }
 
 int main() {
-    const auto root = std::filesystem::path("anyps5-file-vector-test-" +
+    const auto root = std::filesystem::path("leonps5-file-vector-test-" +
         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     Require(std::filesystem::create_directory(root));
     const auto path = root / "data.bin";

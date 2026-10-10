@@ -32,7 +32,7 @@ static void Check(bool value, int line) {
 int main() {
     const auto originalDirectory = std::filesystem::current_path();
     const auto root = std::filesystem::temp_directory_path() /
-        ("anyps5-savedata-replacement-" +
+        ("leonps5-savedata-replacement-" +
          std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     Require(std::filesystem::create_directory(root));
     std::filesystem::current_path(root);

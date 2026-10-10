@@ -12,7 +12,7 @@ static void Require(bool value, const char* what) {
 }
 
 static std::uint64_t Parse(const char* text) {
-    const auto path = std::filesystem::temp_directory_path() / ("anyps5_cpu_topology_test_cpus-" + std::to_string(std::random_device{}()));
+    const auto path = std::filesystem::temp_directory_path() / ("leonps5_cpu_topology_test_cpus-" + std::to_string(std::random_device{}()));
     {
         std::ofstream file(path, std::ios::trunc);
         file << text;
@@ -32,7 +32,7 @@ int main() {
     Require(Parse("4-2\n") == 0, "reversed range");
     Require(Parse("0-x\n") == 0, "malformed range");
     Require(Parse("0;1\n") == 0, "malformed separator");
-    Require(CpuTopology::MaskFromCpuList("/nonexistent/anyps5/cpus") == 0, "missing file");
+    Require(CpuTopology::MaskFromCpuList("/nonexistent/leonps5/cpus") == 0, "missing file");
 
     const auto& layout = CpuTopology::Get();
     Require(layout.process != 0, "process affinity read");

@@ -19,7 +19,7 @@ def fixture():
 def main():
     relinker = Path(sys.argv[1]).resolve()
     failures = []
-    with tempfile.TemporaryDirectory(prefix="anyps5-dynamic-segment-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-dynamic-segment-") as directory:
         work = Path(directory)
 
         def convert(name, image, error=None):

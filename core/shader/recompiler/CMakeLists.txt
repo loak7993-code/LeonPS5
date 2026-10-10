@@ -4,7 +4,7 @@ function(add_shader_recompiler target runtimeTarget)
         message(FATAL_ERROR "Shader recompiler requires an existing runtime target: ${runtimeTarget}")
     endif()
 
-    if(ANYPS5_ENABLE_SPIRV_TOOLS AND NOT TARGET SPIRV-Tools-opt)
+    if(LEONPS5_ENABLE_SPIRV_TOOLS AND NOT TARGET SPIRV-Tools-opt)
         set(SPIRV-Headers_SOURCE_DIR "${PROJECT_SOURCE_DIR}/3rdparty/SPIRV-Headers")
         set(SPIRV_SKIP_EXECUTABLES ON)
         set(SPIRV_SKIP_TESTS ON)
@@ -184,7 +184,7 @@ function(add_shader_recompiler target runtimeTarget)
 
     find_package(Git QUIET)
     set(shaderCacheSubmodules "${PROJECT_SOURCE_DIR}/3rdparty/SPIRV-Headers" "${PROJECT_SOURCE_DIR}/3rdparty/glslang")
-    if(ANYPS5_ENABLE_SPIRV_TOOLS)
+    if(LEONPS5_ENABLE_SPIRV_TOOLS)
         list(APPEND shaderCacheSubmodules "${PROJECT_SOURCE_DIR}/3rdparty/SPIRV-Tools")
     endif()
     set(shaderCacheSubmoduleStamps)
@@ -204,7 +204,7 @@ function(add_shader_recompiler target runtimeTarget)
 
     get_target_property(shaderCacheIncludeDirectories ${target} INCLUDE_DIRECTORIES)
     string(TOUPPER "${CMAKE_BUILD_TYPE}" shaderCacheBuildType)
-    set(shaderCacheExtra "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} ${CMAKE_BUILD_TYPE} spirv-tools=${ANYPS5_ENABLE_SPIRV_TOOLS} ${CMAKE_SYSTEM_PROCESSOR} flags=${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${shaderCacheBuildType}}")
+    set(shaderCacheExtra "${CMAKE_CXX_COMPILER_ID} ${CMAKE_CXX_COMPILER_VERSION} ${CMAKE_BUILD_TYPE} spirv-tools=${LEONPS5_ENABLE_SPIRV_TOOLS} ${CMAKE_SYSTEM_PROCESSOR} flags=${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${shaderCacheBuildType}}")
     set(shaderCacheReviewedNames
             BuildPreparedShaderKey
             BuildRectListShaders
@@ -284,9 +284,9 @@ function(add_shader_recompiler target runtimeTarget)
             SPIRV
     )
 
-    if(ANYPS5_ENABLE_SPIRV_TOOLS)
+    if(LEONPS5_ENABLE_SPIRV_TOOLS)
         target_sources(${target} PRIVATE ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/SpirvBackend/src/SpirvOptimizer.cpp)
         target_link_libraries(${target} PRIVATE SPIRV-Tools-opt SPIRV-Tools-static)
     endif()
-    target_compile_definitions(${target} PUBLIC ANYPS5_ENABLE_SPIRV_TOOLS=$<BOOL:${ANYPS5_ENABLE_SPIRV_TOOLS}>)
+    target_compile_definitions(${target} PUBLIC LEONPS5_ENABLE_SPIRV_TOOLS=$<BOOL:${LEONPS5_ENABLE_SPIRV_TOOLS}>)
 endfunction()

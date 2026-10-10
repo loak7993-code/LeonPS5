@@ -25,8 +25,8 @@ Runner::Options ParseOptions(int argc, char* argv[]) {
             positional.push_back(argument);
         }
     }
-    if (positional.empty()) throw std::invalid_argument("usage: anyps5 [--windows] [--to-intel] [--libs <dir>] <game-directory-or-elf> [output-directory]");
-    if (positional.size() > 2) throw std::invalid_argument("usage: anyps5 [--windows] [--to-intel] [--libs <dir>] <game-directory-or-elf> [output-directory]");
+    if (positional.empty()) throw std::invalid_argument("usage: leonps5 [--windows] [--to-intel] [--libs <dir>] <game-directory-or-elf> [output-directory]");
+    if (positional.size() > 2) throw std::invalid_argument("usage: leonps5 [--windows] [--to-intel] [--libs <dir>] <game-directory-or-elf> [output-directory]");
     options.input = positional[0];
     if (positional.size() > 1) options.output = positional[1];
     return options;

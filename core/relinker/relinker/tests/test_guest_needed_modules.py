@@ -32,7 +32,7 @@ def executable_with_needed():
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-needed-modules-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-needed-modules-") as directory:
         work = Path(directory)
 
         def convert(case, windows):

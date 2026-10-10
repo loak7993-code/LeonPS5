@@ -112,9 +112,9 @@ static void WriteFile(const std::filesystem::path& path, const std::vector<unsig
 
 static void SetFontDirectory(const std::filesystem::path& directory) {
 #ifdef _WIN32
-    Require(_putenv_s("ANYPS5_SYSTEM_FONTS", directory.string().c_str()) == 0);
+    Require(_putenv_s("LEONPS5_SYSTEM_FONTS", directory.string().c_str()) == 0);
 #else
-    Require(::setenv("ANYPS5_SYSTEM_FONTS", directory.string().c_str(), 1) == 0);
+    Require(::setenv("LEONPS5_SYSTEM_FONTS", directory.string().c_str(), 1) == 0);
 #endif
 }
 
@@ -132,7 +132,7 @@ int main() {
     constexpr std::uint32_t VietnameseBold = 0x18070057u;
     constexpr std::uint32_t JapaneseJg2Light = 0x1A0835D3u;
     constexpr std::uint32_t ChineseGb = 0x180CB0D4u;
-    const std::filesystem::path root = std::filesystem::temp_directory_path() / ("anyps5_guest_system_font-" + std::to_string(std::random_device{}()));
+    const std::filesystem::path root = std::filesystem::temp_directory_path() / ("leonps5_guest_system_font-" + std::to_string(std::random_device{}()));
     std::filesystem::remove_all(root);
     const std::filesystem::path empty = root / "empty";
     const std::filesystem::path fonts = root / "fonts";

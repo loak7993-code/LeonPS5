@@ -9,7 +9,7 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#if ANYPS5_ENABLE_SPIRV_TOOLS
+#if LEONPS5_ENABLE_SPIRV_TOOLS
 #include <spirv-tools/libspirv.hpp>
 #endif
 
@@ -38,7 +38,7 @@ void CheckStorageOnlyModule(const RecompileResult& result, std::string_view name
         offset += count;
     }
     Check(byteType && store, std::string(name) + ": lost the byte storage regression fixture");
-#if ANYPS5_ENABLE_SPIRV_TOOLS
+#if LEONPS5_ENABLE_SPIRV_TOOLS
     std::string diagnostics;
     spvtools::SpirvTools validator(SPV_ENV_VULKAN_1_1);
     validator.SetMessageConsumer([&](spv_message_level_t, const char*, const spv_position_t&, const char* message) {

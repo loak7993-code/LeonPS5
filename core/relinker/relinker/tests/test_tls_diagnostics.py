@@ -13,7 +13,7 @@ TLS_INSTRUCTION = bytes.fromhex("64 8b 04 25 28 00 00 00")
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-tls-diagnostics-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-tls-diagnostics-") as directory:
         work = Path(directory) / "input with spaces"
         work.mkdir()
         source = work / "eboot.elf"

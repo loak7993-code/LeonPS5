@@ -1,7 +1,7 @@
 #include "Recompiler.hpp"
 #include "BdaAbi.hpp"
 #include "SpirvBackend/SpirvModule.hpp"
-#if ANYPS5_ENABLE_SPIRV_TOOLS
+#if LEONPS5_ENABLE_SPIRV_TOOLS
 #include "SpirvBackend/SpirvOptimizer.hpp"
 #endif
 #include <algorithm>
@@ -407,7 +407,7 @@ RectListShaders BuildRectListShaders(const RecompileResult& vertex, const Recomp
     shaders.control.bindings.push_back({DescriptorKind::StorageBuffer, DescriptorRole::FaultBuffer, 0, faultBinding, 1, {}});
     shaders.control.bdaAbiVersion = BdaAbi::Version;
     shaders.evaluation.spirv = evaluation.EmitEvaluation();
-#if ANYPS5_ENABLE_SPIRV_TOOLS
+#if LEONPS5_ENABLE_SPIRV_TOOLS
     shaders.control.spirv = ValidateAndOptimizeSpirv(shaders.control.spirv, target.vulkanVersion, target.spirvVersion);
     shaders.evaluation.spirv = ValidateAndOptimizeSpirv(shaders.evaluation.spirv, target.vulkanVersion, target.spirvVersion);
 #endif

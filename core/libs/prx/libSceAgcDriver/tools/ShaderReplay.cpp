@@ -8,7 +8,7 @@
 #include "Recompiler.hpp"
 #include "RdnaDecoder/RdnaInstructionDecoder.hpp"
 
-#if ANYPS5_ENABLE_SPIRV_TOOLS
+#if LEONPS5_ENABLE_SPIRV_TOOLS
 #include "spirv-tools/libspirv.hpp"
 #endif
 
@@ -132,14 +132,14 @@ bool Replay(const char* path) {
                 }
             }
         }
-#if ANYPS5_ENABLE_SPIRV_TOOLS
+#if LEONPS5_ENABLE_SPIRV_TOOLS
         if (g_disassemble) {
             spvtools::SpirvTools tools(SPV_ENV_VULKAN_1_2);
             std::string text;
             if (tools.Disassemble(result.spirv, &text, SPV_BINARY_TO_TEXT_OPTION_FRIENDLY_NAMES)) std::printf("%s\n", text.c_str());
         }
 #else
-        if (g_disassemble) std::printf("  (--dis needs ANYPS5_ENABLE_SPIRV_TOOLS=ON)\n");
+        if (g_disassemble) std::printf("  (--dis needs LEONPS5_ENABLE_SPIRV_TOOLS=ON)\n");
 #endif
         return true;
     } catch (const std::exception& error) {

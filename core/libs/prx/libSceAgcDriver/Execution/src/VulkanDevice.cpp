@@ -598,7 +598,7 @@ VulkanDevice::VulkanDevice(const PresentationWindow* window) : state(std::make_u
         ~LoaderUnlock() { AgcDriverUnlockVulkanLoader_nid_postfix(); }
     } loaderUnlock;
     VkApplicationInfo application{VK_STRUCTURE_TYPE_APPLICATION_INFO};
-    application.pApplicationName = "AnyPS5 libSceAgcDriver";
+    application.pApplicationName = "LeonPS5 libSceAgcDriver";
     application.apiVersion = VK_API_VERSION_1_1;
     VkInstanceCreateInfo create{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
     create.pApplicationInfo = &application;
@@ -640,7 +640,7 @@ VulkanDevice::VulkanDevice(const PresentationWindow* window) : state(std::make_u
     VkPhysicalDevice selected = VK_NULL_HANDLE;
     std::uint32_t family = 0;
     int selectedRank = -1;
-    const char* requestedName = std::getenv("ANYPS5_GPU");
+    const char* requestedName = std::getenv("LEONPS5_GPU");
     if (requestedName != nullptr && *requestedName == '\0') requestedName = nullptr;
     const auto matchesRequest = [&](const char* deviceName) {
         const std::string_view name(deviceName);
@@ -708,7 +708,7 @@ VulkanDevice::VulkanDevice(const PresentationWindow* window) : state(std::make_u
         }
     }
     if (selected == VK_NULL_HANDLE && requestedName != nullptr) {
-        throw std::runtime_error(std::string("Vulkan: no usable device whose name contains ANYPS5_GPU=\"") + requestedName + "\"; devices: " + candidateNames);
+        throw std::runtime_error(std::string("Vulkan: no usable device whose name contains LEONPS5_GPU=\"") + requestedName + "\"; devices: " + candidateNames);
     }
     if (selected == VK_NULL_HANDLE) {
         throw std::runtime_error(window ? "Vulkan: no Vulkan 1.1 device with graphics, compute and swapchain presentation" : "Vulkan: no Vulkan 1.1 graphics and compute queue");

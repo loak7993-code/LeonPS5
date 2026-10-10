@@ -76,7 +76,7 @@ void TestDirNameSearchPs4() {
 }
 
 int main() {
-    const auto root = std::filesystem::temp_directory_path() / ("anyps5-savedata-ps4-" + std::to_string(std::random_device{}()));
+    const auto root = std::filesystem::temp_directory_path() / ("leonps5-savedata-ps4-" + std::to_string(std::random_device{}()));
     std::filesystem::create_directories(root / "_sd" / "kept");
     const auto previous = std::filesystem::current_path();
     std::filesystem::current_path(root);

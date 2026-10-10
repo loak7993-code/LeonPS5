@@ -29,7 +29,7 @@ static void Check(bool value, int line) {
 
 int main() {
     const auto root = std::filesystem::temp_directory_path() /
-        ("anyps5-directory-buffer-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
+        ("leonps5-directory-buffer-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     Require(std::filesystem::create_directory(root));
     const std::string name = "a-long-directory-entry-name.bin";
     { std::ofstream file(root / name); Require(static_cast<bool>(file)); }

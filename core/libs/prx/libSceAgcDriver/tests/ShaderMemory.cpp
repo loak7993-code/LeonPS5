@@ -8,7 +8,7 @@
 #include "Optimization/SrtWalker/SrtEvaluator.hpp"
 #include "Optimization/SrtWalker/SrtFlatSlotClasses.hpp"
 #include "SpirvBackend/SpirvAnalysis.hpp"
-#if ANYPS5_ENABLE_SPIRV_TOOLS
+#if LEONPS5_ENABLE_SPIRV_TOOLS
 #include "SpirvBackend/SpirvOptimizer.hpp"
 #endif
 #include "CacheKey.hpp"
@@ -365,7 +365,7 @@ void verifyBindlessTable() {
     const auto uniform = scan(compiled->spirv);
     require(uniform.dynamicIndexing && uniform.switched, "bindless: the SPIR-V does not index the image array dynamically");
     require(!uniform.shaderNonUniform && !uniform.nonUniform, "bindless: a single-subgroup workgroup was decorated NonUniform");
-#if ANYPS5_ENABLE_SPIRV_TOOLS
+#if LEONPS5_ENABLE_SPIRV_TOOLS
     static_cast<void>(ValidateAndOptimizeSpirv(compiled->spirv, request.target.vulkanVersion, request.target.spirvVersion));
 #endif
 
@@ -515,7 +515,7 @@ void verifyDescriptorPhis() {
         request.context.memory = memory.Regions();
         const auto compiled = Recompile(request, *capture);
         require(countOps(compiled->spirv, OpImageSampleExplicitLod) == 2u, "descriptor Phi: the specialized SPIR-V does not sample once per edge");
-#if ANYPS5_ENABLE_SPIRV_TOOLS
+#if LEONPS5_ENABLE_SPIRV_TOOLS
         static_cast<void>(ValidateAndOptimizeSpirv(compiled->spirv, request.target.vulkanVersion, request.target.spirvVersion));
 #endif
         return capture;
@@ -1844,7 +1844,7 @@ int main(int argc, char** argv) {
         verifyTwoLaneUniformValues();
         verifyBdaReadFallbackFunctions();
         verifyFunctionLdsBound();
-#if ANYPS5_ENABLE_SPIRV_TOOLS
+#if LEONPS5_ENABLE_SPIRV_TOOLS
         const std::vector<std::uint32_t> minimalSpirv{
             0x07230203u, 0x00010000u, 0u, 5u, 0u,
             0x00020011u, 1u,
@@ -1952,7 +1952,7 @@ int main(int argc, char** argv) {
         auto missingMemory = request;
         missingMemory.context.memory = {};
         expectFailure([&] { static_cast<void>(Recompile(missingMemory)); }, "SrtWalker::EvaluateRuntimeSources", "cache hit bypassed resource validation");
-#if ANYPS5_ENABLE_SPIRV_TOOLS
+#if LEONPS5_ENABLE_SPIRV_TOOLS
         auto invalidSpirv = first.spirv;
         invalidSpirv[0] = 0;
         expectFailure([&] { static_cast<void>(ValidateAndOptimizeSpirv(invalidSpirv, request.target.vulkanVersion, request.target.spirvVersion)); }, "SPIR-V validation before optimization failed", "invalid SPIR-V passed validation");

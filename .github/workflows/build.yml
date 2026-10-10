@@ -139,7 +139,7 @@ jobs:
           7z x "$RUNNER_TEMP/winlibs.zip" -oC:/winlibs > /dev/null
       - if: runner.os == 'Windows'
         run: echo 'C:\winlibs\mingw64\bin' >> "$GITHUB_PATH"
-      - run: cmake -S . -B build-relinker -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DANYPS5_RELINKER_ONLY=ON -DBUILD_TESTING=ON
+      - run: cmake -S . -B build-relinker -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=${{ matrix.compiler }} -DLEONPS5_RELINKER_ONLY=ON -DBUILD_TESTING=ON
       - run: cmake --build build-relinker --parallel 3
       - run: ctest --test-dir build-relinker --output-on-failure --timeout 120
 
@@ -161,14 +161,14 @@ jobs:
           evict-old-files: job
       - name: Install lavapipe for the GPU execution tests
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libvulkan1 mesa-vulkan-drivers
-      - run: cmake -S . -B build $CONFIGURE -DANYPS5_ENABLE_SPIRV_TOOLS=ON
+      - run: cmake -S . -B build $CONFIGURE -DLEONPS5_ENABLE_SPIRV_TOOLS=ON
       - name: Check that every test executable is registered with ctest
         run: python3 tools/check_test_registration.py build
       - run: cmake --build build
       - run: cmake --build build --target libs
       - run: ctest --test-dir build --output-on-failure --timeout 120 --parallel 4 --output-log ctest.log
         env:
-          ANYPS5_REQUIRE_VULKAN: 1
+          LEONPS5_REQUIRE_VULKAN: 1
           GALLIUM_OVERRIDE_CPU_CAPS: avx
       - name: Report tests slower than 30 s
         if: ${{ !cancelled() }}

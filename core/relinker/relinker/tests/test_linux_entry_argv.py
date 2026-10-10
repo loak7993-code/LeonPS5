@@ -31,7 +31,7 @@ def argv_fixture():
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-argv-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-argv-") as directory:
         source = Path(directory) / "input.elf"
         output = Path(directory) / "output.elf"
         source.write_bytes(argv_fixture())

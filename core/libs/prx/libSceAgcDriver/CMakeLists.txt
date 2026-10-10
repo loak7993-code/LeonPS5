@@ -308,7 +308,7 @@ add_test_executable(agc_spirv_narrow_constant_store_tests EXCLUDE_FROM_ALL tests
 target_link_libraries(agc_spirv_narrow_constant_store_tests PRIVATE shader_recompiler_agc_driver libc)
 set_target_properties(agc_spirv_narrow_constant_store_tests PROPERTIES CXX_EXTENSIONS OFF)
 configure_windows_unwind(agc_spirv_narrow_constant_store_tests)
-if(ANYPS5_ENABLE_SPIRV_TOOLS)
+if(LEONPS5_ENABLE_SPIRV_TOOLS)
     target_link_libraries(agc_spirv_narrow_constant_store_tests PRIVATE SPIRV-Tools-static)
     add_test_executable(agc_spirv_optimizer_tests EXCLUDE_FROM_ALL tests/SpirvOptimizer.cpp)
     target_link_libraries(agc_spirv_optimizer_tests PRIVATE shader_recompiler_agc_driver libc SPIRV-Tools-static)
@@ -622,7 +622,7 @@ target_include_directories(agc_driver_prepared_shaders_tests PRIVATE
 
 if(BUILD_TESTING)
     add_test(NAME agc_shader_bindless COMMAND agc_shader_memory_tests --bindless)
-    set_tests_properties(agc_shader_bindless PROPERTIES ENVIRONMENT "ANYPS5_NO_SHADER_CACHE=1" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+    set_tests_properties(agc_shader_bindless PROPERTIES ENVIRONMENT "LEONPS5_NO_SHADER_CACHE=1" WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
     if(WIN32)
         set_tests_properties(agc_shader_bindless PROPERTIES ENVIRONMENT_MODIFICATION "PATH=path_list_prepend:$<TARGET_FILE_DIR:libc>")
     endif()
@@ -633,7 +633,7 @@ if(BUILD_TESTING)
         string(REGEX REPLACE "_tests$" "" agcTestName "${agcTest}")
         set_target_properties(${agcTest} PROPERTIES EXCLUDE_FROM_ALL OFF)
         add_test(NAME ${agcTestName} COMMAND ${agcTest})
-        set_tests_properties(${agcTestName} PROPERTIES ENVIRONMENT "ANYPS5_NO_SHADER_CACHE=1" SKIP_RETURN_CODE 77 WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+        set_tests_properties(${agcTestName} PROPERTIES ENVIRONMENT "LEONPS5_NO_SHADER_CACHE=1" SKIP_RETURN_CODE 77 WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
         if(WIN32)
             set_tests_properties(${agcTestName} PROPERTIES ENVIRONMENT_MODIFICATION
                 "PATH=path_list_prepend:$<TARGET_FILE_DIR:libc>")
@@ -641,19 +641,19 @@ if(BUILD_TESTING)
     endforeach()
     set_tests_properties(agc_driver_flat_store PROPERTIES RUN_SERIAL TRUE)
     add_test(NAME agc_driver_sampled_cache_budget_memory COMMAND agc_driver_sampled_cache_budget_tests memory)
-    set_tests_properties(agc_driver_sampled_cache_budget_memory PROPERTIES ENVIRONMENT "ANYPS5_NO_SHADER_CACHE=1" SKIP_RETURN_CODE 77)
+    set_tests_properties(agc_driver_sampled_cache_budget_memory PROPERTIES ENVIRONMENT "LEONPS5_NO_SHADER_CACHE=1" SKIP_RETURN_CODE 77)
     if(WIN32)
         set_tests_properties(agc_driver_sampled_cache_budget_memory PROPERTIES ENVIRONMENT_MODIFICATION
             "PATH=path_list_prepend:$<TARGET_FILE_DIR:libc>")
     endif()
     add_test(NAME agc_driver_pm4_failure COMMAND agc_driver_pm4_tests failure)
-    set_tests_properties(agc_driver_pm4_failure PROPERTIES ENVIRONMENT "ANYPS5_NO_SHADER_CACHE=1" SKIP_RETURN_CODE 77)
+    set_tests_properties(agc_driver_pm4_failure PROPERTIES ENVIRONMENT "LEONPS5_NO_SHADER_CACHE=1" SKIP_RETURN_CODE 77)
     if(WIN32)
         set_tests_properties(agc_driver_pm4_failure PROPERTIES ENVIRONMENT_MODIFICATION
             "PATH=path_list_prepend:$<TARGET_FILE_DIR:libc>")
     endif()
     add_test(NAME agc_driver_flip_compute COMMAND agc_driver_flip_tests compute)
-    set_tests_properties(agc_driver_flip_compute PROPERTIES ENVIRONMENT "ANYPS5_NO_SHADER_CACHE=1" SKIP_RETURN_CODE 77)
+    set_tests_properties(agc_driver_flip_compute PROPERTIES ENVIRONMENT "LEONPS5_NO_SHADER_CACHE=1" SKIP_RETURN_CODE 77)
     if(WIN32)
         set_tests_properties(agc_driver_flip_compute PROPERTIES ENVIRONMENT_MODIFICATION
             "PATH=path_list_prepend:$<TARGET_FILE_DIR:libc>")
@@ -676,7 +676,7 @@ if(BUILD_TESTING)
             add_test(NAME ${agcTestName} COMMAND ${CMAKE_COMMAND} -E env
                     ${agcSpirvEnvironment} "$<TARGET_FILE:${agcTest}>")
             set_tests_properties(${agcTestName} PROPERTIES
-                    ENVIRONMENT "ANYPS5_NO_SHADER_CACHE=1" TIMEOUT 60 SKIP_RETURN_CODE 77)
+                    ENVIRONMENT "LEONPS5_NO_SHADER_CACHE=1" TIMEOUT 60 SKIP_RETURN_CODE 77)
             if(agcTest STREQUAL "agc_driver_constant_store_tests")
                 set_tests_properties(${agcTestName} PROPERTIES RUN_SERIAL TRUE)
             endif()
@@ -696,7 +696,7 @@ if(BUILD_TESTING)
         else()
             add_test(NAME ${preparedTest} COMMAND agc_driver_prepared_shaders_tests)
         endif()
-        set_tests_properties(${preparedTest} PROPERTIES ENVIRONMENT "ANYPS5_NO_SHADER_CACHE=1" SKIP_RETURN_CODE 77 WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+        set_tests_properties(${preparedTest} PROPERTIES ENVIRONMENT "LEONPS5_NO_SHADER_CACHE=1" SKIP_RETURN_CODE 77 WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
         if(preparedMode STREQUAL "uncached")
             set_property(TEST ${preparedTest} APPEND PROPERTY ENVIRONMENT "APS5_NO_DISPATCH_CACHE=1")
         elseif(preparedMode STREQUAL "debug" OR preparedMode STREQUAL "debug_failure")
@@ -716,11 +716,11 @@ if(AGC_BUILD_VISUAL_TEST)
     set(visualShaders)
 
     foreach(stage IN ITEMS vert frag)
-        set(shaderOutput "${ANYPS5_TEST_OUTPUT_DIRECTORY}/Triangle.${stage}.spv")
+        set(shaderOutput "${LEONPS5_TEST_OUTPUT_DIRECTORY}/Triangle.${stage}.spv")
 
         add_custom_command(
                 OUTPUT "${shaderOutput}"
-                COMMAND ${CMAKE_COMMAND} -E make_directory "${ANYPS5_TEST_OUTPUT_DIRECTORY}"
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${LEONPS5_TEST_OUTPUT_DIRECTORY}"
                 COMMAND "$<TARGET_FILE:glslang-standalone>"
                 -V
                 --target-env vulkan1.1
@@ -831,7 +831,7 @@ add_executable(agc_shader_replay EXCLUDE_FROM_ALL
 )
 target_include_directories(agc_shader_replay PRIVATE ${LIBS_INCLUDE_DIR})
 target_link_libraries(agc_shader_replay PRIVATE shader_recompiler_agc_driver libc)
-if(ANYPS5_ENABLE_SPIRV_TOOLS)
+if(LEONPS5_ENABLE_SPIRV_TOOLS)
     target_link_libraries(agc_shader_replay PRIVATE SPIRV-Tools-static)
 endif()
 set_target_properties(agc_shader_replay PROPERTIES CXX_EXTENSIONS OFF)
@@ -1038,7 +1038,7 @@ configure_windows_unwind(agc_pixel_position_export_tests)
 if(BUILD_TESTING)
     set_target_properties(agc_pixel_position_export_tests PROPERTIES EXCLUDE_FROM_ALL OFF)
     add_test(NAME agc_pixel_position_export COMMAND agc_pixel_position_export_tests)
-    set_tests_properties(agc_pixel_position_export PROPERTIES ENVIRONMENT "ANYPS5_NO_SHADER_CACHE=1")
+    set_tests_properties(agc_pixel_position_export PROPERTIES ENVIRONMENT "LEONPS5_NO_SHADER_CACHE=1")
     if(WIN32)
         set_tests_properties(agc_pixel_position_export PROPERTIES ENVIRONMENT_MODIFICATION
             "PATH=path_list_prepend:$<TARGET_FILE_DIR:libc>")

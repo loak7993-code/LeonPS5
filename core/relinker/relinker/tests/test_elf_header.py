@@ -12,7 +12,7 @@ def main():
         ("header-only", b"\x7fELF\x02\x01\x01" + bytes(57), "No PT_DYNAMIC segment found"),
         ("bad-magic", bytes(64), "Invalid ELF magic number"),
     ]
-    with tempfile.TemporaryDirectory(prefix="anyps5-elf-header-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-elf-header-") as directory:
         for name, data, error in cases:
             source = Path(directory) / (name + ".elf")
             output = source.with_suffix(".out")

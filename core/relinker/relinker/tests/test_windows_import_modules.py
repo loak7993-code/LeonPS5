@@ -169,7 +169,7 @@ def shell_execute_exit_code(executable_path):
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix='anyps5-import-modules-') as directory:
+    with tempfile.TemporaryDirectory(prefix='leonps5-import-modules-') as directory:
         work = Path(directory)
 
         def convert(name, owner, symbol='shared#A#B', guest_owner=None, module_name=None, provider_name='b.prx', extra_dependencies=(), windows_gui=False):

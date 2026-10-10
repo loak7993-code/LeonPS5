@@ -11,14 +11,14 @@
 int main(int, char* argv[]) {
     const auto executable = std::filesystem::absolute(argv[0]);
     const auto name = executable.stem().string();
-    if (name.starts_with("anyps5-autorun-child-")) {
+    if (name.starts_with("leonps5-autorun-child-")) {
         if (name.find("signal") != std::string::npos) std::raise(SIGILL);
         return 42;
     }
-    auto child = std::filesystem::temp_directory_path() / ("anyps5-autorun-child-" +
+    auto child = std::filesystem::temp_directory_path() / ("leonps5-autorun-child-" +
         std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) + " with spaces" + executable.extension().string());
 #ifndef _WIN32
-    const auto signaled = child.parent_path() / ("anyps5-autorun-child-signal-" + child.filename().string());
+    const auto signaled = child.parent_path() / ("leonps5-autorun-child-signal-" + child.filename().string());
 #endif
     std::istringstream input("\n\n\n");
     auto* savedInput = std::cin.rdbuf(input.rdbuf());

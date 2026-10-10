@@ -997,10 +997,10 @@ void verifySpecializationLiveness() {
 }
 
 void verifyDefaultDirectory(const char* self) {
-    setEnvironment("ANYPS5_SHADER_CACHE_DIR", "");
-    setEnvironment("ANYPS5_NO_SHADER_CACHE", "1");
-    require(ShaderRecompiler::ShaderCacheDirectory().empty(), "ANYPS5_NO_SHADER_CACHE=1 did not disable the cache");
-    setEnvironment("ANYPS5_NO_SHADER_CACHE", "0");
+    setEnvironment("LEONPS5_SHADER_CACHE_DIR", "");
+    setEnvironment("LEONPS5_NO_SHADER_CACHE", "1");
+    require(ShaderRecompiler::ShaderCacheDirectory().empty(), "LEONPS5_NO_SHADER_CACHE=1 did not disable the cache");
+    setEnvironment("LEONPS5_NO_SHADER_CACHE", "0");
     const auto directory = ShaderRecompiler::ShaderCacheDirectory();
     require(directory.filename() == "shader_cache", "the default cache directory is not named shader_cache");
     std::error_code error;
@@ -1016,8 +1016,8 @@ int main(int argc, char** argv) {
         const auto directory = std::filesystem::temp_directory_path() / ("aps5-shader-disk-cache-test-" + std::to_string(std::random_device{}()));
         std::filesystem::remove_all(directory);
         verifyDefaultDirectory(argv[0]);
-        setEnvironment("ANYPS5_NO_SHADER_CACHE", "0");
-        setEnvironment("ANYPS5_SHADER_CACHE_DIR", directory.string());
+        setEnvironment("LEONPS5_NO_SHADER_CACHE", "0");
+        setEnvironment("LEONPS5_SHADER_CACHE_DIR", directory.string());
         verifyResultRoundTrip();
         verifyEntryRoundTrip();
         verifyArtifactStorageIsolation();

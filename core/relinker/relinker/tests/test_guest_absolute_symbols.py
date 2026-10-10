@@ -61,7 +61,7 @@ def elf_relocation(data):
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-guest-absolute-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-guest-absolute-") as directory:
         work = Path(directory)
 
         def convert(name, windows, section):

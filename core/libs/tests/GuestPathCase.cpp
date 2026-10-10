@@ -35,7 +35,7 @@ static void CheckRead(const std::string& path, char expected) {
 
 int main() {
     const auto host = std::filesystem::canonical(std::filesystem::current_path());
-    const auto name = "AnyPS5-Case-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const auto name = "LeonPS5-Case-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
     const auto directory = host / name;
     Require(std::filesystem::create_directories(directory / "Data" / "Nested"));
     { std::ofstream file(directory / "Data" / "Settings.ini"); file << 'x'; }

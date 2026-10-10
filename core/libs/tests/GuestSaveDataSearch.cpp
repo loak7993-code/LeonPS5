@@ -58,7 +58,7 @@ static void SearchAndMount() {
 int main() {
     const auto previous = std::filesystem::current_path();
     const auto root = std::filesystem::temp_directory_path() /
-        ("anyps5-savedata-search-" + std::to_string(std::random_device{}()));
+        ("leonps5-savedata-search-" + std::to_string(std::random_device{}()));
     std::filesystem::create_directories(root);
     std::filesystem::current_path(root);
     int status = 0;

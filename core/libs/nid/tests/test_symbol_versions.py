@@ -150,7 +150,7 @@ def read_dynsym(image):
 
 
 def patch(patcher, image, filename):
-    with tempfile.TemporaryDirectory(prefix="anyps5-symbol-versions-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-symbol-versions-") as directory:
         path = Path(directory) / filename
         path.write_bytes(image)
         result = subprocess.run([patcher, LIBRARY_NAME, str(path)], capture_output=True)

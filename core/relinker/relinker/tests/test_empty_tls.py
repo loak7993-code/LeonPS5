@@ -18,7 +18,7 @@ def main():
         ("invalid-sizes", 1, 0, False, "Invalid or unsupported ELF TLS layout"),
         ("empty-access", 0, 0, True, "Guest TLS access with empty PT_TLS"),
     ]
-    with tempfile.TemporaryDirectory(prefix="anyps5-tls-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-tls-") as directory:
         for name, file_size, memory_size, access, error in cases:
             source = Path(directory) / (name + ".elf")
             output = source.with_suffix(".exe")

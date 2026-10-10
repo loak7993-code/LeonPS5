@@ -4,9 +4,9 @@ add_library(runner_core STATIC
 target_include_directories(runner_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(runner_core PUBLIC relinker_core)
 
-add_executable(anyps5 ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
-target_link_libraries(anyps5 PRIVATE runner_core)
-set_target_properties(anyps5 PROPERTIES CXX_EXTENSIONS OFF)
+add_executable(leonps5 ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
+target_link_libraries(leonps5 PRIVATE runner_core)
+set_target_properties(leonps5 PROPERTIES CXX_EXTENSIONS OFF)
 
 if(BUILD_TESTING AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_test_executable(runner_e2e_tests ${CMAKE_CURRENT_SOURCE_DIR}/tests/RunnerTests.cpp)

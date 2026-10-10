@@ -23,7 +23,7 @@ def run(*args):
     subprocess.run([str(arg) for arg in args], check=True)
 
 
-with tempfile.TemporaryDirectory(prefix='anyps5-exceptions-') as directory:
+with tempfile.TemporaryDirectory(prefix='leonps5-exceptions-') as directory:
     work = Path(directory)
     for optimization in ('-O0', '-O2'):
         runtime = work / 'runtime.o'

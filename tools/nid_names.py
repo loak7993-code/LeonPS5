@@ -13,7 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 PRX = ROOT / "core" / "libs" / "prx"
 DB_URL = ("https://raw.githubusercontent.com/zecoxao/sce_symbols"
           "/2883963a0a514ba6e77407a08ef4730a65e88254/aerolib.csv")
-DEFAULT_CACHE = Path(tempfile.gettempdir()) / "anyps5-nid-db" / "aerolib.csv"
+DEFAULT_CACHE = Path(tempfile.gettempdir()) / "leonps5-nid-db" / "aerolib.csv"
 
 CHARSET = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+-"
 SUFFIX = bytes([0x51, 0x8D, 0x64, 0xA6, 0x35, 0xDE, 0xD8, 0xC1,
@@ -82,7 +82,7 @@ def collect_real_names():
 def main():
     parser = argparse.ArgumentParser(
         description="Suggest real names for Unknown NID stubs")
-    parser.add_argument("--db", default=os.environ.get("ANYPS5_NID_DB"),
+    parser.add_argument("--db", default=os.environ.get("LEONPS5_NID_DB"),
                         help="NID database CSV (downloaded to a cache dir by default)")
     parser.add_argument("--nid", nargs="*", default=[],
                         help="resolve only these NIDs instead of scanning the tree")

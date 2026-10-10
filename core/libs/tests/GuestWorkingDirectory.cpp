@@ -14,7 +14,7 @@ int main() {
     const auto host = std::filesystem::canonical(std::filesystem::current_path());
     char path[1024];
     Require(getcwd_nid_postfix(path, sizeof(path)) == path && std::strcmp(path, "/") == 0);
-    const auto name = "anyps5-cwd-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
+    const auto name = "leonps5-cwd-test-" + std::to_string(std::chrono::steady_clock::now().time_since_epoch().count());
     const auto directory = host / name;
     Require(std::filesystem::create_directory(directory));
     { std::ofstream file(directory / "sample.txt"); file << "sample"; }

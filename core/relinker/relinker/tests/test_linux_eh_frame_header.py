@@ -48,7 +48,7 @@ def relink(relinker, directory, name, image):
 
 def main():
     relinker = Path(sys.argv[1]).resolve()
-    with tempfile.TemporaryDirectory(prefix="anyps5-eh-frame-") as directory:
+    with tempfile.TemporaryDirectory(prefix="leonps5-eh-frame-") as directory:
         image = fixture(7)
         result, elf = relink(relinker, directory, "spare-slot", image)
         assert "PT_GNU_EH_FRAME" not in result.stderr, result.stderr

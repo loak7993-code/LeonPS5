@@ -19,7 +19,7 @@ static void Check(bool value, int line) {
 
 int main() {
     const auto root = std::filesystem::temp_directory_path() /
-        ("anyps5-savedata-write-failure-" +
+        ("leonps5-savedata-write-failure-" +
          std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()));
     Require(std::filesystem::create_directory(root));
 

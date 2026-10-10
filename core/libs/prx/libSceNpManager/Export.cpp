@@ -19,6 +19,9 @@ static std::atomic<int> g_nextRequest{1};
 
 namespace {
 std::mutex reachabilityMutex;
+std::mutex presenceMutex;
+void* presenceCallback = nullptr;
+void* presenceUserData = nullptr;
 void* reachabilityCallback = nullptr;
 void* reachabilityUserdata = nullptr;
 }
@@ -126,9 +129,11 @@ int APS5_VABI sceNpPollAsync(int req_id, int* result) {
 }
 
 void APS5_VABI sceNpRegisterGamePresenceCallback(void* callback, void* userdata) {
- (void)callback;
- (void)userdata;
- NotImplemented_nid_no_patch(__func__);
+ if (!callback) return;
+ std::lock_guard lock(presenceMutex);
+ if (presenceCallback) return;
+ presenceCallback = callback;
+ presenceUserData = userdata;
 }
 
 int APS5_VABI sceNpRegisterNpReachabilityStateCallback(void* callback, void* userdata) {
@@ -167,8 +172,7 @@ int APS5_VABI sceNpRegisterStateCallback(void* callback, void* userdata) {
 }
 
 int APS5_VABI sceNpSetContentRestriction(const NpContentRestriction* restriction) {
- (void)restriction;
- NotImplemented_nid_no_patch(__func__);
+ if (!restriction) return SCE_NP_ERROR_INVALID_ARGUMENT;
  return 0;
 }
 
@@ -210,7 +214,7 @@ int APS5_VABI sceNpUnregisterPremiumEventCallback(void) {
 }
 
 int APS5_VABI sceNpGetUserIdByAccountId() {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 

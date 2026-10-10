@@ -135,27 +135,27 @@ int APS5_VABI sceNpEntitlementAccessRequestConsumeServiceEntitlement(void) {
 
 
 int APS5_VABI sceNpEntitlementAccessPollServiceEntitlementInfo(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 
 int APS5_VABI sceNpEntitlementAccessPollUnifiedEntitlementInfo(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 
 int APS5_VABI sceNpEntitlementAccessRequestServiceEntitlementInfo(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 
 int APS5_VABI sceNpEntitlementAccessRequestUnifiedEntitlementInfo(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 
 int APS5_VABI sceNpEntitlementAccessGetPftFlag(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 

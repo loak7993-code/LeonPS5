@@ -367,7 +367,7 @@ int APS5_VABI sceKernelRaiseException(Pthread thread, int signum) {
 #ifdef _WIN32
  return RaiseOn(thread, handler, signum) ? 0 : SCE_KERNEL_ERROR_ESRCH;
 #else
- NotImplemented_nid_no_patch(__func__);
+ throw std::runtime_error(std::string(__func__) + ": signal delivery to a guest thread is not implemented on this platform");
  return 0;
 #endif
 }

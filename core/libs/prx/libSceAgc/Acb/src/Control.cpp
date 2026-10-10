@@ -13,7 +13,7 @@ extern "C" {
 
 // unknown signature
 void* APS5_VABI sceAgcAcbAtomicGds_0900(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return nullptr;
 }
 
@@ -49,7 +49,7 @@ std::uint32_t* APS5_VABI sceAgcAcbWaitUntilSafeForRendering(CommandBuffer* buf, 
     (void)buf;
     (void)videoOutHandle;
     (void)displayBufferIndex;
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceAgcAcbWaitUntilSafeForRendering") + ": the video-out flip reservation packet cannot be built against this command buffer state");
     return nullptr;
 }
 
@@ -59,8 +59,7 @@ std::uint32_t* APS5_VABI sceAgcAcbSetFlip(CommandBuffer* buf, std::uint32_t vide
     (void)displayBufferIndex;
     (void)flipMode;
     (void)flipArg;
-    NotImplemented_nid_no_patch(__func__);
-    return nullptr;
+    throw std::runtime_error(std::string(__func__) + ": the flip packet layout is unverified, so the call throws instead of emitting a wrong packet");
 }
 
 uint32_t* APS5_VABI sceAgcAcbPushMarker(CommandBuffer* buf, const char* str, uint32_t color) {

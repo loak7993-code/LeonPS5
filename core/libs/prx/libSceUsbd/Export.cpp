@@ -47,127 +47,127 @@ std::int32_t APS5_VABI sceUsbdHandleEventsTimeout(const UsbdTimeval* timeout) {
 }
 
 int APS5_VABI sceUsbdAllocTransfer() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdAttachKernelDriver() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdCancelTransfer() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdCheckConnected() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdClaimInterface() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdClose() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdControlTransfer() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdEventHandlingOk() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdFillInterruptTransfer() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdFreeConfigDescriptor() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdFreeTransfer() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdGetActiveConfigDescriptor() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdGetBusNumber() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdGetConfigDescriptor() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdGetDeviceAddress() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdGetDeviceDescriptor() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdGetStringDescriptor() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdKernelDriverActive() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdOpen() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdRefDevice() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdReleaseInterface() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdResetDevice() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdSetConfiguration() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdSubmitTransfer() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
 int APS5_VABI sceUsbdUnrefDevice() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 

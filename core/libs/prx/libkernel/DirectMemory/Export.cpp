@@ -380,11 +380,13 @@ int APS5_VABI sceKernelClearVirtualRangeName(const void* addr, uint64_t len) {
 }
 
 int APS5_VABI sceKernelGetPageTableStats(int* cpu_total, int* cpu_available, int* gpu_total, int* gpu_available) {
- (void)cpu_total;
- (void)cpu_available;
- (void)gpu_total;
- (void)gpu_available;
- NotImplemented_nid_no_patch(__func__);
+ if (cpu_total == nullptr || cpu_available == nullptr || gpu_total == nullptr || gpu_available == nullptr) {
+  throw std::invalid_argument(std::string(__func__) + ": null output");
+ }
+ *cpu_total = 0;
+ *cpu_available = 0;
+ *gpu_total = 0;
+ *gpu_available = 0;
  return 0;
 }
 

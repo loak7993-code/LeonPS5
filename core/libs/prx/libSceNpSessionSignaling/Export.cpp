@@ -60,10 +60,10 @@ int APS5_VABI sceNpSessionSignalingTerminate(void) {
 int32_t APS5_VABI sceNpSessionSignalingGetConnectionStatus(int32_t context_id, int32_t connection_id, int32_t* status, void* peer_address, uint16_t* peer_port) {
  (void)context_id;
  (void)connection_id;
- (void)status;
- (void)peer_address;
- (void)peer_port;
- NotImplemented_nid_no_patch(__func__);
+ if (status == nullptr) throw std::invalid_argument(std::string(__func__) + ": null status");
+ *status = 0;
+ if (peer_address != nullptr) std::memset(peer_address, 0, 16);
+ if (peer_port != nullptr) *peer_port = 0;
  return 0;
 }
 
@@ -80,17 +80,17 @@ int APS5_VABI sceNpSessionSignalingRequestPrepare(uint32_t contextId, uint32_t* 
 }
 
 int APS5_VABI sceNpSessionSignalingGetMemoryInfo(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 
 int APS5_VABI sceNpSessionSignalingGetConnectionStatistics(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 
 int APS5_VABI sceNpSessionSignalingGetConnectionFromPeerAddress(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 }

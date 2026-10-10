@@ -229,7 +229,7 @@ int APS5_VABI sceKernelUnlink(const char* path) {
 }
 
 int APS5_VABI sceKernelFcntl() {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 

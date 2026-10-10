@@ -12,7 +12,7 @@ uint32_t* APS5_VABI sceAgcDcbSetWorkloadComplete(CommandBuffer* buf, uint32_t st
  (void)buf;
  (void)stream_id;
  (void)workload_id;
- NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceAgcDcbSetWorkloadComplete") + ": the workload-complete packet layout is unverified, so the call throws instead of emitting a wrong packet");
  return nullptr;
 }
 
@@ -21,7 +21,7 @@ uint32_t* APS5_VABI sceAgcDcbSetWorkloadsActive(CommandBuffer* buf, uint32_t str
  (void)stream_id;
  (void)workload_ids;
  (void)workload_count;
- NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceAgcDcbSetWorkloadsActive") + ": the workload-active packet layout is unverified, so the call throws instead of emitting a wrong packet");
  return nullptr;
 }
 

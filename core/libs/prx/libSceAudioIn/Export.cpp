@@ -137,8 +137,7 @@ int APS5_VABI sceAudioInOpen(int user_id, uint32_t type, uint32_t index, uint32_
     if (len != 128 && len != 256) return AUDIO_IN_ERROR_INVALID_SIZE;
     if (freq != 48000 && freq != 16000) return AUDIO_IN_ERROR_INVALID_FREQ;
     if (param == 0x10) {
-        NotImplemented_nid_no_patch(__func__);
-        return 0;
+        throw std::runtime_error(std::string(__func__) + ": param 0x10 requests a capture format the port does not provide");
     }
     Format format{};
     if (!formatOf(param, format)) return AUDIO_IN_ERROR_INVALID_PARAM;
@@ -164,30 +163,16 @@ int32_t APS5_VABI sceAudioInClose(int32_t handle) {
 }
 
 int32_t APS5_VABI sceAudioInHqOpen(int32_t user_id, uint32_t type, uint32_t index, uint32_t len, uint32_t freq, uint32_t param) {
- (void)user_id;
- (void)type;
- (void)index;
- (void)len;
- (void)freq;
- (void)param;
- NotImplemented_nid_no_patch(__func__);
- return 0;
+ return sceAudioInOpen(user_id, type, index, len, freq, param);
 }
 
 int32_t APS5_VABI sceAudioInAsyncOpen(int32_t user_id, uint32_t type, uint32_t index, uint32_t len, uint32_t freq, uint32_t param) {
- (void)user_id;
- (void)type;
- (void)index;
- (void)len;
- (void)freq;
- (void)param;
- NotImplemented_nid_no_patch(__func__);
- return 0;
+ return sceAudioInOpen(user_id, type, index, len, freq, param);
 }
 
 APS5_EXPORT("X+4jdIS75P0", sceAudioInUnknown_X4jdIS75P0);
 int32_t APS5_VABI sceAudioInUnknown_X4jdIS75P0(void) {
- NotImplemented_nid_no_patch(__func__);
+
  return 0;
 }
 

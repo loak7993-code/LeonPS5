@@ -44,7 +44,7 @@ int APS5_VABI sceGameUpdateGetAddcontLatestVersion(uint32_t service_label, const
         return SCE_GAME_UPDATE_ERROR_INVALID_ARGUMENT;
     }
     if (entitlement_label == nullptr) {
-        NotImplemented_nid_no_patch(__func__);
+        throw std::runtime_error(std::string(__func__) + " not implemented");
     }
     if (info->size < sizeof(GameUpdateAddcontVersionInfo)) {
         return SCE_GAME_UPDATE_ERROR_INVALID_SIZE;

@@ -293,9 +293,8 @@ std::int32_t APS5_VABI sceAudioPropagationSourceSetAudioPaths(AudioPropagationHa
 
 std::int32_t APS5_VABI sceAudioPropagationSourceSetAudioPath(AudioPropagationHandle path, const void* data, float gain) {
     static_cast<void>(path);
-    static_cast<void>(data);
     static_cast<void>(gain);
-    NotImplemented_nid_no_patch(__func__);
+    if (data != nullptr) throw std::runtime_error(std::string(__func__) + ": audio path data is not supported, the source produces silence");
     return 0;
 }
 

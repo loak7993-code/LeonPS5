@@ -10,7 +10,7 @@ extern "C" {
 int APS5_VABI sceAgcDriverSubmitCommandBuffer(void* queue_context, const Packet* packet) {
  (void)queue_context;
  (void)packet;
- NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceAgcDriverSubmitCommandBuffer") + ": direct command-buffer submission to the host queue is not wired for this entry point");
  return 0;
 }
 
@@ -19,7 +19,7 @@ int APS5_VABI sceAgcDriverSubmitMultiCommandBuffers(void* queue_context, uint32_
  (void)command_buffers;
  (void)sizes_in_dwords;
  (void)count;
- NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceAgcDriverSubmitMultiCommandBuffers") + ": multi command-buffer submission to the host queue is not wired for this entry point");
  return 0;
 }
 

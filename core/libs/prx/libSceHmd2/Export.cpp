@@ -17,83 +17,99 @@ std::int32_t APS5_VABI sceHmd2Initialize(const void* param) {
 }
 
 int APS5_VABI sceHmd2Close() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceHmd2Close") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceHmd2GazeGetResultForFoveatedRendering() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceHmd2GazeGetResultForFoveatedRendering") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceHmd2GetDeviceInformation() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceHmd2GetDeviceInformation") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceHmd2GetFieldOfViewWithoutHandle() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceHmd2GetFieldOfViewWithoutHandle") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceHmd2Open() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceHmd2Open") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceHmd2ReprojectionBeginFrame() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceHmd2ReprojectionBeginFrame") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceHmd2ReprojectionDisableVrMode() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceHmd2ReprojectionDisableVrMode") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceHmd2ReprojectionEnableVrMode() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceHmd2ReprojectionEnableVrMode") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceHmd2ReprojectionGetPredictedDisplayTime() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceHmd2ReprojectionGetPredictedDisplayTime") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceHmd2ReprojectionInitialize() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceHmd2ReprojectionInitialize") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceHmd2ReprojectionQueryBufferSizeAlign() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceHmd2ReprojectionQueryBufferSizeAlign") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceHmd2ReprojectionQueryDisplayBufferSizeAlign() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceHmd2ReprojectionQueryDisplayBufferSizeAlign") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceHmd2ReprojectionSetAllowPositionalReprojection() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceHmd2ReprojectionSetAllowPositionalReprojection") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceHmd2ReprojectionSetParamWithBuffer() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceHmd2ReprojectionSetParamWithBuffer") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceHmd2ReprojectionSetRenderConfig() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceHmd2ReprojectionSetRenderConfig") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceHmd2SetVibration() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceHmd2SetVibration") + " not implemented");
     return 0;
+
 }
 
 }

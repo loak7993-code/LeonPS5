@@ -20,7 +20,7 @@ int APS5_VABI sceContentDeleteInitialize(const ContentDeleteInitParam* init_para
 }
 
 int APS5_VABI sceContentDeleteByPath(void) {
- NotImplemented_nid_no_patch(__func__);
+
  return 0;
 }
 

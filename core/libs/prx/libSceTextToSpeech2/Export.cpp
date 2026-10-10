@@ -12,8 +12,9 @@ constexpr std::int32_t SCE_KERNEL_ERROR_EOPNOTSUPP = static_cast<std::int32_t>(0
 extern "C" {
 
 int APS5_VABI sceTextToSpeech2GetSystemStatus() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceTextToSpeech2GetSystemStatus") + " not implemented");
     return 0;
+
 }
 
 std::int32_t APS5_VABI sceTextToSpeech2Initialize(const void* param) {
@@ -22,33 +23,39 @@ std::int32_t APS5_VABI sceTextToSpeech2Initialize(const void* param) {
 }
 
 int APS5_VABI sceTextToSpeech2Cancel() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceTextToSpeech2Cancel") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceTextToSpeech2Close() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceTextToSpeech2Close") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceTextToSpeech2GetSpeechStatus() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceTextToSpeech2GetSpeechStatus") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceTextToSpeech2Open() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceTextToSpeech2Open") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceTextToSpeech2Speak() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceTextToSpeech2Speak") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceTextToSpeech2Terminate() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceTextToSpeech2Terminate") + " not implemented");
     return 0;
+
 }
 
 }

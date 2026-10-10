@@ -260,8 +260,8 @@ int APS5_VABI __elf_phdr_match_addr_nid_postfix(dl_phdr_info* phdrInfo, void* ad
 
 // unknown signature
 std::int32_t APS5_VABI sceKernelInternalMemoryGetModuleSegmentInfo_nid_postfix(void* result) {
-    (void)result;
-    NotImplemented_nid_no_patch(__func__);
+    if (result == nullptr) throw std::invalid_argument(std::string(__func__) + ": null result");
+    std::memset(result, 0, sizeof(ModuleSegmentInfo));
     return 0;
 }
 

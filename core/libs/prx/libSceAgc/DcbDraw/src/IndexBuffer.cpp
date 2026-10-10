@@ -45,12 +45,12 @@ std::uint32_t* APS5_VABI sceAgcDcbSetIndexSize_0600(CommandBuffer* buf, std::uin
 std::uint32_t* APS5_VABI sceAgcDcbSetIndexIndirectArgs(CommandBuffer* buf, std::uint32_t dataOffsetInBytes) {
     (void)buf;
     (void)dataOffsetInBytes;
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceAgcDcbSetIndexIndirectArgs") + ": the index indirect-args packet layout is unverified, so the call throws instead of emitting a wrong packet");
     return nullptr;
 }
 
 std::uint32_t APS5_VABI sceAgcDcbSetIndexIndirectArgsGetSize() {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 

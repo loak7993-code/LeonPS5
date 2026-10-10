@@ -153,7 +153,7 @@ int APS5_VABI sceHttpSetAuthInfoCallback(int id, HttpAuthInfoCallback callback, 
 int APS5_VABI sceHttpSetCookieEnabled(int id, int enable) {
     (void)id;
     if (static_cast<uint32_t>(enable) > 1) return ERROR_INVALID_VALUE;
-    if (enable != 0) NotImplemented_nid_no_patch(__func__);
+    if (enable != 0) throw std::runtime_error(std::string(__func__) + " not implemented");
     return 0;
 }
 
@@ -243,7 +243,7 @@ int APS5_VABI sceHttpUnsetEpoll(int id) {
 
 int APS5_VABI sceHttpWaitRequest(HttpEpollHandle eh, HttpNBEvent* nbev, int maxevents, int timeout) {
     if (!eh || !nbev || maxevents <= 0) return ERROR_INVALID_VALUE;
-    if (timeout < 0) NotImplemented_nid_no_patch(__func__);
+    if (timeout < 0) throw std::runtime_error(std::string(__func__) + ": a negative timeout waits forever with no network source");
     std::this_thread::sleep_for(std::chrono::microseconds(timeout));
     return 0;
 }
@@ -282,7 +282,7 @@ int APS5_VABI sceHttpSetInflateGZIPEnabled(int id, int enable) {
 }
 
 int APS5_VABI sceHttpSetRequestStatusCallback(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 
@@ -416,7 +416,7 @@ int APS5_VABI sceHttpSetRedirectCallback(int id, HttpRedirectCallback cbfunc, vo
 }
 
 int APS5_VABI sceHttpAbortWaitRequest(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 }

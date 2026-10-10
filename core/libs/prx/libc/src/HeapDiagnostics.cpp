@@ -30,16 +30,12 @@ void LibcHeapTraceInfo_nid_no_patch(LibcHeapInfo* info) {
 
 // unknown signature
 void APS5_VABI sceLibcInternalBacktraceForGame_nid_postfix(const char* heapName) {
-    (void)heapName;
-    NotImplemented_nid_no_patch(__func__);
+    std::fprintf(stderr, "libc heap diagnostics for %s\n", heapName != nullptr ? heapName : "(null)");
 }
 
 // unknown signature
 void APS5_VABI sceLibcInternalHeapErrorReportForGame_nid_postfix(void* heap, void* block, std::uint32_t error) {
-    (void)heap;
-    (void)block;
-    (void)error;
-    NotImplemented_nid_no_patch(__func__);
+    std::fprintf(stderr, "libc heap error report: heap %p block %p error 0x%x\n", heap, block, error);
 }
 
 }

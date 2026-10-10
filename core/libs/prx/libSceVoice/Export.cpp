@@ -200,32 +200,31 @@ int APS5_VABI sceVoiceWriteToIPort(uint32_t input_port_id, const void* data, uin
     (void)data;
     (void)size;
     (void)frame_gaps;
-    NotImplemented_nid_no_patch(__func__);
-    return 0;
+    throw std::runtime_error(std::string(__func__) + ": no voice service is running, so there is no port to write to");
 }
 
 int APS5_VABI sceVoiceSetMuteFlag() {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 
 int APS5_VABI sceVoiceGetResourceInfo(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 
 int APS5_VABI sceVoiceEnableChat(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 
 int APS5_VABI sceVoiceResetPort(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 
 int APS5_VABI sceVoiceDisableChat(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 

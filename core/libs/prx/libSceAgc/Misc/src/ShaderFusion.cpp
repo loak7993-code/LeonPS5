@@ -319,7 +319,7 @@ int APS5_VABI sceAgcUpdateInterpolantMapping_0100(ShaderRegister* regs, const Sh
     (void)regs;
     (void)vs;
     (void)ps;
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceAgcUpdateInterpolantMapping_0100") + ": the interpolant mapping packet layout is unverified, so the call throws instead of emitting a wrong packet");
     return 0;
 }
 

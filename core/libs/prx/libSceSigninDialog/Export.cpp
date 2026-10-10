@@ -22,18 +22,18 @@ std::atomic<int> g_status{COMMON_DIALOG_STATUS_NONE};
 extern "C" {
 
 int APS5_VABI sceSigninDialogClose(void) {
- NotImplemented_nid_no_patch(__func__);
+
  return 0;
 }
 
 int APS5_VABI sceSigninDialogGetResult(void* result) {
- (void)result;
- NotImplemented_nid_no_patch(__func__);
+ if (result == nullptr) throw std::invalid_argument(std::string(__func__) + ": null result");
+ std::memset(result, 0, 4);
  return 0;
 }
 
 int APS5_VABI sceSigninDialogGetStatus(void) {
- NotImplemented_nid_no_patch(__func__);
+
  return 0;
 }
 

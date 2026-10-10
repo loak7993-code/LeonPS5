@@ -13,27 +13,25 @@ int APS5_VABI sceNgs2GeomApply(const Ngs2GeomListenerWork* listener, const Ngs2G
     (void)source;
     (void)out_attrib;
     (void)flags;
-    NotImplemented_nid_no_patch(__func__);
-    return 0;
+    throw std::runtime_error(std::string(__func__) + ": geometric occlusion is not modeled");
 }
 
 int APS5_VABI sceNgs2GeomCalcListener(const Ngs2GeomListenerParam* param, Ngs2GeomListenerWork* out_work, uint32_t flags) {
     (void)param;
     (void)out_work;
     (void)flags;
-    NotImplemented_nid_no_patch(__func__);
-    return 0;
+    throw std::runtime_error(std::string(__func__) + ": geometric occlusion is not modeled");
 }
 
 int APS5_VABI sceNgs2GeomResetListenerParam(Ngs2GeomListenerParam* out_listener_param) {
-    (void)out_listener_param;
-    NotImplemented_nid_no_patch(__func__);
+    if (out_listener_param == nullptr) throw std::invalid_argument(std::string(__func__) + ": null out param");
+    *out_listener_param = Ngs2GeomListenerParam {};
     return 0;
 }
 
 int APS5_VABI sceNgs2GeomResetSourceParam(Ngs2GeomSourceParam* out_source_param) {
-    (void)out_source_param;
-    NotImplemented_nid_no_patch(__func__);
+    if (out_source_param == nullptr) throw std::invalid_argument(std::string(__func__) + ": null out param");
+    *out_source_param = Ngs2GeomSourceParam {};
     return 0;
 }
 

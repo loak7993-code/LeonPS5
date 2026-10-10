@@ -32,47 +32,47 @@ int APS5_VABI sceKernelDebugWriteCppExceptionInfo(const void* exception, uint64_
 
 
 int APS5_VABI sceCoredumpAttachUserFile(void) {
-    NotImplemented_nid_no_patch("5nc2gdLNsok");
+
     return 0;
 }
 
 int APS5_VABI sceCoredumpGetStopInfoGpu_Agc(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 
 int APS5_VABI sceCoredumpAttachMemoryRegionAsUserFile(void) {
-    NotImplemented_nid_no_patch("MEJ7tc7ThwM");
+
     return 0;
 }
 
 int APS5_VABI sceCoredumpSetUserDataType(void) {
-    NotImplemented_nid_no_patch("Uxqkdta7wEg");
+
     return 0;
 }
 
 int APS5_VABI sceCoredumpDebugTextOut(void) {
-    NotImplemented_nid_no_patch("dei8oUx6DbU");
+
     return 0;
 }
 
 int APS5_VABI sceCoredumpGetStopInfoCpu(void) {
-    NotImplemented_nid_no_patch("kK0DUW1Ukgc");
+
     return 0;
 }
 
 int APS5_VABI sceCoredumpWriteUserString() {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 
 int APS5_VABI sceCoredumpAttachUserMemoryFile(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 
 int APS5_VABI sceCoredumpAttachMemoryRegion(void) {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 }

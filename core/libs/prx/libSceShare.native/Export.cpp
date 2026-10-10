@@ -10,15 +10,13 @@ extern "C" {
 int APS5_VABI sceShareCaptureScreenshot(const void* param, int32_t* req_id) {
  (void)param;
  (void)req_id;
- NotImplemented_nid_no_patch(__func__);
- return 0;
+ throw std::runtime_error(std::string(__func__) + ": the share service has no capture backend");
 }
 
 int APS5_VABI sceShareCaptureVideoClip(const void* param, int32_t* req_id) {
  (void)param;
  (void)req_id;
- NotImplemented_nid_no_patch(__func__);
- return 0;
+ throw std::runtime_error(std::string(__func__) + ": the share service has no capture backend");
 }
 
 int APS5_VABI sceShareFeaturePermit(uint32_t feature_flags) {
@@ -33,8 +31,8 @@ int APS5_VABI sceShareFeatureProhibit(uint32_t feature_flags) {
 
 int APS5_VABI sceShareGetCurrentStatus(uint32_t feature_flag, ShareCurrentStatus* status) {
  (void)feature_flag;
- (void)status;
- NotImplemented_nid_no_patch(__func__);
+ if (status == nullptr) throw std::invalid_argument(std::string(__func__) + ": null status");
+ *status = ShareCurrentStatus {};
  return 0;
 }
 
@@ -47,8 +45,7 @@ int APS5_VABI sceShareInitialize(size_t heap_size, int thread_priority, uint64_t
 
 int APS5_VABI sceShareOpenMenuForContent(const void* content_id) {
  (void)content_id;
- NotImplemented_nid_no_patch(__func__);
- return 0;
+ throw std::runtime_error(std::string(__func__) + ": the share menu is not available");
 }
 
 int APS5_VABI sceShareRegisterContentEventCallback(void* callback, void* user_data) {

@@ -107,8 +107,8 @@ int APS5_VABI sceAudioOut2GetSpeakerArrayCoefficients(AudioOut2SpeakerArrayHandl
     (void)num_coefficients;
     (void)height_aware;
     (void)downmix_spread_radius;
-    NotImplemented_nid_no_patch(__func__);
-    return 0;
+    if (coefficients == nullptr) throw std::runtime_error(std::string(__func__) + " not implemented");
+    throw std::runtime_error(std::string(__func__) + ": no speaker engine exists to compute coefficients from");
 }
 
 size_t APS5_VABI sceAudioOut2GetSpeakerArrayMemorySize(uint32_t num_speakers, uint8_t is_3d, uint8_t is_ambisonics) {

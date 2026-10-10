@@ -11,7 +11,7 @@ extern "C" {
 uint32_t* APS5_VABI sceAgcDcbContextStateOp(CommandBuffer* buf, uint32_t operation) {
  (void)buf;
  (void)operation;
- NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceAgcDcbContextStateOp") + ": the context-state packet layout for this entry point is unverified, so the call throws instead of emitting a wrong packet");
  return nullptr;
 }
 

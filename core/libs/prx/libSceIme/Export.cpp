@@ -89,7 +89,7 @@ int APS5_VABI sceImeKeyboardSetMode(int32_t user_id, uint32_t mode) {
 int APS5_VABI sceImeOpen_nid_postfix(const Param* param, const ExtendedParam* extended) {
  (void)param;
  (void)extended;
- NotImplemented_nid_no_patch(__func__);
+ throw std::runtime_error(std::string(__func__) + ": the legacy IME open entry is not supported");
  return 0;
 }
 

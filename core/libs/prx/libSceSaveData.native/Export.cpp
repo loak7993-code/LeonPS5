@@ -741,17 +741,20 @@ int APS5_VABI sceSaveDataDirNameSearchPs4(const SaveDataDirNameSearchCond* cond,
 }
 
 int APS5_VABI sceSaveDataConvert() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceSaveDataConvert") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceSaveDataGetConvertProgress() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceSaveDataGetConvertProgress") + " not implemented");
     return 0;
+
 }
 
 int APS5_VABI sceSaveDataCancel() {
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceSaveDataCancel") + " not implemented");
     return 0;
+
 }
 }

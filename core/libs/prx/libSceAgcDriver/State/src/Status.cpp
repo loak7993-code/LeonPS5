@@ -21,17 +21,17 @@ bool APS5_VABI sceAgcDriverIsSubmitValidationEnabled(void) {
 
 int APS5_VABI sceAgcDriverRequestCaptureStart(const char* path) {
     (void)path;
-    NotImplemented_nid_no_patch(__func__);
+    throw std::runtime_error(std::string("sceAgcDriverRequestCaptureStart") + ": the host has no capture service to request a capture from");
     return 0;
 }
 
 int APS5_VABI sceAgcDriverRequestCaptureStop() {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 
 int APS5_VABI sceAgcDriverTriggerCapture() {
-    NotImplemented_nid_no_patch(__func__);
+
     return 0;
 }
 

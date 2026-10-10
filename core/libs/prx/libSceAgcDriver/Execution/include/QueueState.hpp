@@ -189,6 +189,8 @@ struct QueueState {
     std::uint32_t indexBufferSize = 0;
     std::uint32_t indexType = 0;
     std::uint32_t instanceCount = 1;
+    std::uint32_t indexIndirectArgsOffset = 0;
+    std::optional<std::pair<std::uint32_t, std::string>> setMarker;
     std::vector<std::string> markers;
     Predication predication;
 

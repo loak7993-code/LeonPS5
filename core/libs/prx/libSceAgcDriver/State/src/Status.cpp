@@ -1,5 +1,7 @@
 #include "prx/libSceAgcDriver/State/include/Status.hpp"
 
+#include "prx/libSceAgcDriver/Execution/include/CaptureTrace.hpp"
+
 #include <cstdint>
 #include <cstddef>
 #include "SceTypes.hpp"
@@ -8,11 +10,11 @@
 extern "C" {
 
 bool APS5_VABI sceAgcDriverIsCaptureInProgress(void) {
-    return false;
+    return AgcDriver::CaptureTrace::InProgress();
 }
 
 bool APS5_VABI sceAgcDriverIsTraceInProgress(void) {
-    return false;
+    return AgcDriver::CaptureTrace::InProgress();
 }
 
 bool APS5_VABI sceAgcDriverIsSubmitValidationEnabled(void) {
@@ -20,13 +22,13 @@ bool APS5_VABI sceAgcDriverIsSubmitValidationEnabled(void) {
 }
 
 int APS5_VABI sceAgcDriverRequestCaptureStart(const char* path) {
-    (void)path;
-    throw std::runtime_error(std::string("sceAgcDriverRequestCaptureStart") + ": the host has no capture service to request a capture from");
+    if (path == nullptr || !*path) throw std::invalid_argument(std::string(__func__) + ": null path");
+    AgcDriver::CaptureTrace::Start(path);
     return 0;
 }
 
 int APS5_VABI sceAgcDriverRequestCaptureStop() {
-
+    AgcDriver::CaptureTrace::Stop();
     return 0;
 }
 

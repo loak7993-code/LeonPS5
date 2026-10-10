@@ -180,15 +180,15 @@ std::string_view UnsupportedReason(std::uint32_t header) {
     const auto opcode = (header >> 8u) & 0xffu;
     if (opcode == 0x10) {
         switch ((header >> 2u) & 0x3fu) {
-            case 0: case 0x06: case 0x09: case 0x0b: case 0x0c: case 0x17: case 0x1a: return {};
+            case 0: case 0x06: case 0x09: case 0x0a: case 0x0b: case 0x0c: case 0x17: case 0x1a: return {};
             case 0x14: case 0x18: return "guest cache actions and GPU release events are not implemented";
             default: return "custom packet has no implemented contract in the reference dispatch table";
         }
     }
     switch (opcode) {
-        case 0x11: case 0x12: case 0x13: case 0x15: case 0x16: case 0x20: case 0x22: case 0x26: case 0x27:
+        case 0x11: case 0x12: case 0x13: case 0x15: case 0x16: case 0x1e: case 0x20: case 0x22: case 0x26: case 0x27:
         case 0x2a: case 0x2d: case 0x2f: case 0x35: case 0x37: case 0x40: case 0x42: case 0x45: case 0x46: case 0x50:
-        case 0x58: case 0x63: case 0x64: case 0x69: case 0x76: case 0x79: case 0x7a:
+        case 0x58: case 0x63: case 0x64: case 0x69: case 0x76: case 0x79: case 0x7a: case 0x91:
         case 0x81: case 0x83: case 0x9f: case 0x28: return {};
         case 0x24: case 0x25: case 0x2c: case 0x38:
             if (IndirectDrawsDisabled()) return "graphics draw, shader stages and guest render-target materialization are not implemented";
@@ -246,6 +246,7 @@ void Validate(std::span<const std::uint32_t> packet, std::uint32_t queue) {
                 require(std::find(data.begin(), data.end(), std::byte{}) != data.end(), "unterminated marker text");
                 break;
             }
+            case 0x0a: require(packet.size() >= 3, "invalid SET_MARKER packet size"); break;
             case 0x0c: break;
             case 0x17: graphics(); size(6); break;
             case 0x1a:
@@ -795,7 +796,35 @@ void Execute(std::span<const std::uint32_t> packet, QueueState& queue) {
                 case 0x0c:
                     if (!queue.markers.empty()) queue.markers.pop_back();
                     return;
-                case 0x1a:
+                case 0x0a: {
+                const auto color = packet[1];
+                const auto text = std::span<const std::uint32_t>(packet).subspan(2);
+                std::string marker;
+                for (auto word : text) {
+                    for (int byte = 0; byte < 4; ++byte) {
+                        const auto character = static_cast<char>((word >> (byte * 8)) & 0xffu);
+                        if (character == '\0') break;
+                        marker.push_back(character);
+                    }
+                }
+                queue.setMarker = {color, marker};
+                return;
+            }
+            case 0x1e: {
+                require(packet.size() == 9, "invalid SET_WORKLOAD packet size");
+                const auto control = packet[1] & ~0x40000000u;
+                require(control == 0x267u || control == 0x275u, "unknown workload control word");
+                const auto slot = address(packet[2], packet[3]);
+                require(slot != 0, "workload slot address is null");
+                const std::uint64_t mask = address(packet[4], packet[5]);
+                GuestMemory::Write(slot, std::as_bytes(std::span(&mask, 1)), 8);
+                return;
+            }
+            case 0x91:
+                require(packet.size() == 4, "invalid SET_INDEX_INDIRECT_ARGS packet size");
+                queue.indexIndirectArgsOffset = packet[3] & 0xffffu;
+                return;
+            case 0x1a:
                     if (TraceContextState()) std::fprintf(stderr, "[context] op %u: %zu registers, saved %d, cb0 %x info %x mask %x\n", packet[1], queue.context.size(), queue.savedContext.has_value() ? 1 : 0, queue.context.contains(0x318) ? queue.context.at(0x318) : 0u, queue.context.contains(0x31c) ? queue.context.at(0x31c) : 0u, queue.context.contains(0x8e) ? queue.context.at(0x8e) : 0u);
                     APS5_LOG_OUT_DEBUG("CONTEXT_STATE operation=%u targetMaskBefore=0x%x shaderMaskBefore=0x%x", packet[1], queue.context.contains(0x8e) ? queue.context.at(0x8e) : 0u, queue.context.contains(0x8f) ? queue.context.at(0x8f) : 0u);
                     switch (packet[1]) {

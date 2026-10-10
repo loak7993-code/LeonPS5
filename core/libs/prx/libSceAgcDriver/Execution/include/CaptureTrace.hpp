@@ -20,9 +20,36 @@ public:
         return enabled;
     }
 
+    static void Start(const char* path) {
+        static CaptureTrace& trace = instance();
+        std::lock_guard lock(trace.mutex);
+        if (trace.started) throw std::runtime_error("a capture is already in progress");
+        trace.output.close();
+        trace.output.clear();
+        trace.output.exceptions(std::ios::badbit | std::ios::failbit);
+        trace.output.open(path != nullptr ? path : "capture-trace.log", std::ios::binary);
+        trace.started = true;
+    }
+
+    static void Stop() {
+        static CaptureTrace& trace = instance();
+        std::lock_guard lock(trace.mutex);
+        if (!trace.started) throw std::runtime_error("no capture is in progress");
+        trace.flushRequested = true;
+        trace.changed.notify_one();
+        trace.started = false;
+        trace.output.close();
+        trace.output.clear();
+        trace.output.exceptions(std::ios::badbit | std::ios::failbit);
+    }
+
+    static bool InProgress() {
+        return instance().started;
+    }
+
     template<typename... TArgs>
     static void Log(const char* format, TArgs... args) {
-        if (!Enabled()) return;
+        if (!Enabled() && !instance().started) return;
         std::array<char, 2048> line{};
         const auto size = std::snprintf(line.data(), line.size(), format, args...);
         if (size < 0 || static_cast<std::size_t>(size) >= line.size()) throw std::runtime_error("Capture trace event exceeds 2047 bytes");
@@ -38,7 +65,7 @@ private:
 
     CaptureTrace() {
         output.exceptions(std::ios::badbit | std::ios::failbit);
-        output.open("capture-trace.log", std::ios::binary);
+        if (Enabled()) output.open("capture-trace.log", std::ios::binary);
         worker = std::thread([this] { run(); });
     }
 
@@ -90,6 +117,7 @@ private:
     unsigned long long sequence = 0;
     bool stopping = false;
     bool flushRequested = false;
+    bool started = false;
 };
 
 }

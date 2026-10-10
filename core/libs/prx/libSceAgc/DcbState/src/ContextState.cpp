@@ -9,10 +9,37 @@
 extern "C" {
 
 uint32_t* APS5_VABI sceAgcDcbContextStateOp(CommandBuffer* buf, uint32_t operation) {
- (void)buf;
- (void)operation;
-    throw std::runtime_error(std::string("sceAgcDcbContextStateOp") + ": the context-state packet layout for this entry point is unverified, so the call throws instead of emitting a wrong packet");
- return nullptr;
+    const auto* function = __func__;
+    Agc::Command::Require(buf != nullptr, function, "null command buffer");
+    Agc::Command::Require(operation <= 3u, function, "invalid context state operation");
+    std::uint32_t* first = nullptr;
+    const auto append = [&](std::uint32_t count) {
+        auto* packet = Agc::Command::WriteNop(buf, count, function);
+        if (first == nullptr) {
+            first = packet;
+            packet[0] = Agc::Command::Header(0x10u, count, 0x68u);
+            packet[1] = operation;
+        }
+    };
+    if (operation == 0u) {
+        append(5);
+        return first;
+    }
+    if (operation == 2u) {
+        append(3);
+    }
+    Agc::Command::Reserve(buf, 22u, function);
+    append(5);
+    append(8);
+    append(9);
+    if (operation != 2u) {
+        append(3);
+    }
+    append(2);
+    if (operation == 3u) {
+        append(5);
+    }
+    return first;
 }
 
 uint64_t APS5_VABI sceAgcDcbContextStateOpGetSize(uint32_t operation) {

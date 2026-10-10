@@ -12,9 +12,27 @@
 extern "C" {
 
 // unknown signature
-void* APS5_VABI sceAgcAcbAtomicGds_0900(void) {
-
-    return nullptr;
+std::uint32_t* APS5_VABI sceAgcAcbAtomicGds_0900(CommandBuffer* buf, std::uint32_t control, std::uint32_t mode, std::uint32_t gds_op, std::uint32_t src, std::uint16_t offset, std::uint16_t index, std::uint32_t mask, std::uint32_t data, std::uint64_t compare_data, std::uint64_t extra_data) {
+    const auto* function = __func__;
+    Agc::Command::Require(buf != nullptr, function, "null command buffer");
+    auto control_word = control & 0xffu;
+    control_word |= (control << 7u) & 0x00010000u;
+    control_word |= (control & 0x20u) << 13u;
+    control_word |= (control & 0x40u) << 14u;
+    if ((control & 0x20u) == 0u && mode == 1u) control_word |= 0x00020000u;
+    auto* packet = Agc::Command::Allocate(buf, 11u, function);
+    packet[0] = Agc::Command::Header(0x1du, 11u);
+    packet[1] = control_word;
+    packet[2] = ((gds_op & 1u) << 8u) | (src & 0x3fu);
+    packet[3] = offset;
+    packet[4] = index;
+    packet[5] = mask & 0x00ff00ffu;
+    packet[6] = data;
+    packet[7] = static_cast<std::uint32_t>(compare_data);
+    packet[8] = static_cast<std::uint32_t>(compare_data >> 32u);
+    packet[9] = static_cast<std::uint32_t>(extra_data);
+    packet[10] = static_cast<std::uint32_t>(extra_data >> 32u);
+    return packet;
 }
 
 std::uint32_t* APS5_VABI sceAgcAcbJump(CommandBuffer* buf, std::uint8_t cachePolicy, const std::uint32_t* target, std::uint32_t sizeInDwords) {
@@ -46,11 +64,14 @@ std::uint32_t APS5_VABI sceAgcAcbRewindGetSize() {
 }
 
 std::uint32_t* APS5_VABI sceAgcAcbWaitUntilSafeForRendering(CommandBuffer* buf, std::uint32_t videoOutHandle, std::uint32_t displayBufferIndex) {
-    (void)buf;
-    (void)videoOutHandle;
-    (void)displayBufferIndex;
-    throw std::runtime_error(std::string("sceAgcAcbWaitUntilSafeForRendering") + ": the video-out flip reservation packet cannot be built against this command buffer state");
-    return nullptr;
+    const auto* function = __func__;
+    Agc::Command::Require(buf != nullptr, function, "null command buffer");
+    auto* packet = Agc::Command::Allocate(buf, 4u, function);
+    packet[0] = 0xc0021018u;
+    packet[1] = videoOutHandle;
+    packet[2] = displayBufferIndex;
+    packet[3] = 0u;
+    return packet;
 }
 
 std::uint32_t* APS5_VABI sceAgcAcbSetFlip(CommandBuffer* buf, std::uint32_t videoOutHandle, std::int32_t displayBufferIndex, std::uint32_t flipMode, std::int64_t flipArg) {

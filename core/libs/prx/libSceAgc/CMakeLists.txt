@@ -13,6 +13,7 @@ add_library(libSceAgc SHARED EXCLUDE_FROM_ALL
         ${CMAKE_CURRENT_SOURCE_DIR}/Command/src/Draw.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/Command/src/RegisterDefaults.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/Command/src/Packet.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/Command/src/Workload.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/DcbDraw/src/DrawIndexed.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/DcbDraw/src/DrawNonIndexed.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/DcbDraw/src/IndexBuffer.cpp

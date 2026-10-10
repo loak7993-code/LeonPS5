@@ -1,4 +1,5 @@
 add_library(libSceFiber SHARED EXCLUDE_FROM_ALL Export.cpp)
+set_target_properties(libSceFiber PROPERTIES INTERPROCEDURAL_OPTIMIZATION FALSE)
 target_include_directories(libSceFiber PRIVATE ${LIBS_INCLUDE_DIR})
 configure_windows_unwind(libSceFiber)
 

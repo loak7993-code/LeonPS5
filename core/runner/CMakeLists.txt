@@ -6,6 +6,7 @@ target_link_libraries(runner_core PUBLIC relinker_core)
 
 add_executable(leonps5 ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 target_link_libraries(leonps5 PRIVATE runner_core)
+set_target_properties(leonps5 runner_core PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 set_target_properties(leonps5 PROPERTIES CXX_EXTENSIONS OFF)
 
 if(BUILD_TESTING AND CMAKE_SYSTEM_NAME STREQUAL "Linux")

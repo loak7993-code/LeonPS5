@@ -79,6 +79,7 @@ target_include_directories(relinker_core PUBLIC
 
 add_executable(relinker ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
 target_link_libraries(relinker PRIVATE relinker_core)
+set_target_properties(relinker relinker_core PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
 
 if(WIN32)
     add_test_executable(windows_dependency_diagnostics_tests EXCLUDE_FROM_ALL

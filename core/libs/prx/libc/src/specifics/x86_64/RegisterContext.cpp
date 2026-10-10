@@ -4,6 +4,8 @@
 extern "C" void LibcCaptureRegisters(std::uintptr_t*);
 extern "C" [[noreturn]] void LibcRestoreRegisters(const std::uintptr_t*);
 
+extern "C" [[gnu::used]] int LibcRegisterContextKeep() { return 0; }
+
 #if (defined(__linux__) || defined(__APPLE__)) && defined(__x86_64__)
 asm(
 ".text\n"

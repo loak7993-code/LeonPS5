@@ -1,5 +1,22 @@
 # Relinker usage
 
+## One-command runner
+
+`anyps5` converts a game and runs it in one step. It accepts a game directory with the ELF
+executable and its `sce_module/`, `sce_modules/` or `prx/` beside it, or the ELF path directly:
+
+```sh
+anyps5 <game-directory-or-elf> [output-directory]
+```
+
+The output directory defaults to `anyps5-out/` inside the game directory. The command relinks the
+ELF into `app.elf` (Linux) or, with `--windows`, `app.exe`, copies the system libraries from
+`--libs <dir>` into `libs/` (when `--libs` is not given, the build tree beside the `anyps5` binary
+is used), copies the remaining game files into `app0/`, and launches the converted executable,
+printing its exit code. `--to-intel` converts AMD-only instructions first. With `--windows` on
+Linux the layout is prepared and the command to run it on Windows is printed instead. The relinker
+options below remain available for direct use.
+
 ## Input and conversion
 
 Use a clean ELF executable. Place its bundled ELF modules in `sce_module/`, `sce_modules/`, or `prx/` beside the input executable. `prx/` can coexist with either `sce_module/` or `sce_modules/`. Both `sce_module/` and `sce_modules/` present, or all three absent, is an error.

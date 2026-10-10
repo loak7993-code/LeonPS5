@@ -1,5 +1,4 @@
-add_executable(relinker
-        ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
+add_library(relinker_core STATIC
         ${CMAKE_CURRENT_SOURCE_DIR}/cli/src/CliArgs.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/cli/src/Autorun.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/elfpatcher/src/linux/LinuxElfPatcher.cpp
@@ -64,8 +63,9 @@ add_executable(relinker
         ${CMAKE_CURRENT_SOURCE_DIR}/relinker/src/output/SysVDynamicSectionBuilder.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/relinker/src/output/CallRegistryWriter.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/relinker/src/pipeline/RelinkerPipeline.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/cli/src/Convert.cpp
 )
-target_include_directories(relinker PRIVATE
+target_include_directories(relinker_core PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/cli/include
         ${CMAKE_CURRENT_SOURCE_DIR}/domain/include
         ${CMAKE_CURRENT_SOURCE_DIR}/elfpatcher/include
@@ -73,6 +73,9 @@ target_include_directories(relinker PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/codegen/include
         ${CMAKE_CURRENT_SOURCE_DIR}/relinker/include
 )
+
+add_executable(relinker ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
+target_link_libraries(relinker PRIVATE relinker_core)
 
 if(WIN32)
     add_test_executable(windows_dependency_diagnostics_tests EXCLUDE_FROM_ALL

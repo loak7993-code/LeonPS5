@@ -44,6 +44,16 @@ library change without it therefore tests the previous binaries and can show no 
 
 [Relinker usage and runtime layout](../user/USAGE.md).
 
+## One-command runner
+
+```sh
+cmake --build build --target anyps5 --parallel
+./build/core/runner/anyps5 <game-directory-or-elf>
+```
+
+`anyps5` relinks the game, assembles the `libs/` and `app0/` runtime layout from the build tree and
+launches the converted executable; see [Usage](../user/USAGE.md).
+
 ## CMake flags
 
 Project switches accept `ON` or `OFF`:

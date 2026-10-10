@@ -43,19 +43,16 @@ struct BufferAllocation {
 // the 256-byte copied-region buffers to fit, and those then missed on every build (81869 misses
 // and 80850 evictions per run, each a Vulkan create or destroy under the pool mutex, 3.5 s per
 // run). APS5_BUFFER_POOL_SHARED=1 keeps one tier as before.
-//
-// Device-local allocations (the detiler's scratch buffers and the staging shadows of written guest
-// buffers, see GuestBufferMemory) are retained in a third tier with a budget of their own, video
-// memory instead of pinned host memory: APS5_STAGING_POOL_MIB (default 512); 0 keeps them in the
-// two host tiers as before.
 class BufferPool {
 public:
     explicit BufferPool(const Context& context);
+    static VkDeviceSize DeviceBudget(const VkPhysicalDeviceMemoryProperties& memory);
     ~BufferPool();
     BufferPool(const BufferPool&) = delete;
     BufferPool& operator=(const BufferPool&) = delete;
     // The size a buffer for `bytes` is created with: its size class, or `bytes` itself when large.
-    static std::size_t Capacity(std::size_t bytes);
+    static std::size_t Capacity(std::size_t bytes, VkMemoryPropertyFlags properties);
+    static VkBufferUsageFlags Usage(VkBufferUsageFlags usage, VkMemoryPropertyFlags properties);
     std::optional<BufferAllocation> Take(std::size_t bytes, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
     void Put(const BufferAllocation& allocation) noexcept;
 
@@ -90,8 +87,9 @@ private:
     // The tier a buffer of `capacity` and `properties` is retained in (the large one for everything
     // when shared; the device tier for device-local memory while it has a budget).
     Tier& tierFor(std::size_t capacity, VkMemoryPropertyFlags properties);
-    // The device tier's budget (APS5_STAGING_POOL_MIB), read once.
-    static VkDeviceSize DeviceBudget();
+    static bool DeviceTierEnabled();
+    static bool DeviceTiered(VkMemoryPropertyFlags properties);
+    static std::size_t NextCapacity(std::size_t capacity);
     void destroy(const BufferAllocation& allocation) noexcept;
     // Moves the tier's least recently used slot (the oldest front of its lists) to `evicted`; the
     // caller destroys those after releasing the mutex, so builds taking buffers on other threads
@@ -116,6 +114,7 @@ private:
     static constexpr VkDeviceSize smallBudget = 64ull * 1024 * 1024;
     // Requests of this size and more keep their exact size and go to the large tier.
     static constexpr std::size_t classLimit = std::size_t{1} << 20u;
+    static constexpr unsigned deviceClassBits = 3;
     static constexpr std::size_t defaultSlots = 4096;
 };
 

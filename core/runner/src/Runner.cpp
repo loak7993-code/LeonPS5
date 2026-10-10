@@ -159,7 +159,7 @@ int Run(const Options& options) {
         ResolveModuleDirectory(input.directory);
         outputDirectory = options.output.empty() ? input.directory / "leonps5-out" : options.output;
         std::filesystem::create_directories(outputDirectory);
-        outputExecutable = outputDirectory / (options.toWindows ? "app.exe" : "app.elf");
+        outputExecutable = outputDirectory / (options.toWindows ? "app.exe" : options.toMacos ? "app" : "app.elf");
     } catch (const std::invalid_argument& e) {
         std::cerr << "FAIL: " << e.what() << "\n";
         return 1;
@@ -172,6 +172,7 @@ int Run(const Options& options) {
     args.inputPath = input.executable.string();
     args.outputPath = outputExecutable.string();
     args.toWindows = options.toWindows;
+    args.toMacos = options.toMacos;
     args.toIntel = options.toIntel;
     args.runPath = "$ORIGIN/libs";
 
@@ -207,11 +208,17 @@ int Run(const Options& options) {
         return 2;
     }
 
-    if (options.toWindows) {
+    if (options.toWindows || options.toMacos) {
 #ifdef _WIN32
-        return Launch(outputExecutable, options.toWindows);
-#else
+        if (options.toWindows) return Launch(outputExecutable, options.toWindows);
+        std::cout << "Run on macOS: " << outputExecutable.string() << '\n';
+        return 0;
+#elif defined(__APPLE__)
+        if (options.toMacos) return Launch(outputExecutable, options.toWindows);
         std::cout << "Run on Windows: " << outputExecutable.string() << '\n';
+        return 0;
+#else
+        std::cout << "Run on " << (options.toWindows ? "Windows" : "macOS") << ": " << outputExecutable.string() << '\n';
         return 0;
 #endif
     }

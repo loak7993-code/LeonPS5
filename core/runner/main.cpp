@@ -14,6 +14,8 @@ Runner::Options ParseOptions(int argc, char* argv[]) {
         const std::string argument = argv[index];
         if (argument == "--windows") {
             options.toWindows = true;
+        } else if (argument == "--macos") {
+            options.toMacos = true;
         } else if (argument == "--to-intel") {
             options.toIntel = true;
         } else if (argument == "--libs") {
@@ -25,8 +27,8 @@ Runner::Options ParseOptions(int argc, char* argv[]) {
             positional.push_back(argument);
         }
     }
-    if (positional.empty()) throw std::invalid_argument("usage: leonps5 [--windows] [--to-intel] [--libs <dir>] <game-directory-or-elf> [output-directory]");
-    if (positional.size() > 2) throw std::invalid_argument("usage: leonps5 [--windows] [--to-intel] [--libs <dir>] <game-directory-or-elf> [output-directory]");
+    if (positional.empty()) throw std::invalid_argument("usage: leonps5 [--windows] [--macos] [--to-intel] [--libs <dir>] <game-directory-or-elf> [output-directory]");
+    if (positional.size() > 2) throw std::invalid_argument("usage: leonps5 [--windows] [--macos] [--to-intel] [--libs <dir>] <game-directory-or-elf> [output-directory]");
     options.input = positional[0];
     if (positional.size() > 1) options.output = positional[1];
     return options;

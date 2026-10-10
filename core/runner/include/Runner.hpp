@@ -10,6 +10,7 @@ struct Options {
     std::filesystem::path libs;
     std::filesystem::path exeDirectory;
     bool toWindows = false;
+    bool toMacos = false;
     bool toIntel = false;
 };
 

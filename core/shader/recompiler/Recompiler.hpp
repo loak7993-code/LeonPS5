@@ -10,6 +10,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <utility>
 #include <string_view>
 #include <vector>
 
@@ -107,6 +108,11 @@ enum class ConservativeZExport : std::uint8_t {
     GreaterThanZ
 };
 
+enum class ColorExportPacking : std::uint8_t {
+    None,
+    Unorm10_11_11
+};
+
 struct ShaderPixelStageInfo {
     std::uint32_t interpolatorCount;
     std::array<std::uint32_t, 32> interpolatorSettings;
@@ -132,6 +138,8 @@ struct ShaderPixelStageInfo {
     bool orderedPixelShader;
     std::array<std::uint8_t, 8> targetOutputMode;
     std::array<std::uint8_t, 8> targetExportMapping;
+    std::array<ColorExportPacking, 8> targetExportPacking;
+    bool dualSourceBlend;
 };
 
 struct ShaderVertexBufferResource {
@@ -217,6 +225,7 @@ struct SpirvTarget {
     bool nonConstantImageOffsets = false;
     std::uint32_t srgbDecodeFormats = 0;
     bool narrowSubgroupClock = false;
+    bool fixedPushSlots = false;
 };
 
 struct BindingLayout {
@@ -270,6 +279,7 @@ inline constexpr std::uint32_t MeshArgumentIndexCountDword = 3;
 inline constexpr std::uint32_t MeshArgumentFirstIndexDword = 4;
 inline constexpr std::uint32_t MeshArgumentBytes = 20;
 inline constexpr std::uint32_t MeshIndexBufferUserWord = 4;
+inline constexpr std::uint32_t WorkgroupMemoryDescriptorSet = 1;
 
 struct GraphicsDrawParameters {
     std::uint64_t indexAddress;
@@ -371,6 +381,21 @@ struct FragmentParameter {
     bool custom = false;
 };
 
+struct BarycentricEmulation {
+    bool active = false;
+    bool smooth = false;
+    bool linear = false;
+};
+
+struct BarycentricEmulationLayout {
+    static constexpr std::uint32_t NoLocation = 0xffffffffu;
+    std::uint32_t smoothLocation = NoLocation;
+    std::uint32_t linearLocation = NoLocation;
+    std::vector<std::pair<std::uint32_t, std::uint32_t>> perVertexLocations;
+};
+
+[[nodiscard]] BarycentricEmulationLayout LayoutBarycentricEmulation(std::span<const FragmentParameter> parameters, const BarycentricEmulation& emulation);
+
 // Compiled SPIR-V shared between a cached variant and every result materialized from it: results
 // are copied per dispatch and draw, so the words are reference counted and only duplicated when a
 // holder writes to them (tests and tools patch modules in place). Reads look like a vector.
@@ -453,6 +478,7 @@ struct CompiledShaderArtifact {
     std::uint32_t hostSubgroupSize = 0;
     std::vector<std::uint32_t> parameterExports;
     std::vector<FragmentParameter> fragmentParameters;
+    BarycentricEmulation barycentricEmulation;
     std::uint64_t variantId = 0;
 };
 
@@ -462,10 +488,12 @@ struct ShaderInvocation {
     std::vector<DescriptorBinding> bindings;
     std::vector<std::byte> pushConstants;
     std::vector<VertexAttribute> vertexAttributes;
+    std::uint32_t poisonedSrtReads = 0;
 };
 
 struct RecompileResult : CompiledShaderArtifact, ShaderInvocation {
     bool cacheHit = false;
+    std::uint32_t workgroupMemoryDwords = 0;
     [[nodiscard]] std::uint64_t PipelineVariantId() const { return specializationId != 0 ? specializationId : variantId; }
 };
 
@@ -488,6 +516,16 @@ struct RectListShaders {
 };
 
 [[nodiscard]] RectListShaders BuildRectListShaders(const RecompileResult& vertex, const RecompileResult& fragment, const SpirvTarget& target);
+
+struct GeometryStageLimits {
+    std::uint32_t maxGeometryInputComponents;
+    std::uint32_t maxGeometryOutputComponents;
+    std::uint32_t maxGeometryOutputVertices;
+    std::uint32_t maxGeometryTotalOutputComponents;
+    std::uint32_t maxFragmentInputComponents;
+};
+
+[[nodiscard]] RecompileResult BuildBarycentricGeometryShader(const RecompileResult& vertex, const RecompileResult& fragment, const SpirvTarget& target, const std::optional<GeometryStageLimits>& limits);
 
 }
 

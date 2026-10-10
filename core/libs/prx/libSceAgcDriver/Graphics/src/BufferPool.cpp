@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <limits>
 
 namespace AgcDriver::Graphics {
 
@@ -16,12 +17,19 @@ bool sharedTiers() {
     return shared;
 }
 
+bool exactSizes() {
+    static const bool exact = std::getenv("APS5_NO_BUFFER_CLASSES") != nullptr;
+    return exact;
+}
+
+constexpr VkBufferUsageFlags deviceUsage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
 }
 
 BufferPool::BufferPool(const Context& context) : device(context.device), unmap(context.Function<PFN_vkUnmapMemory>("vkUnmapMemory")), destroyBuffer(context.Function<PFN_vkDestroyBuffer>("vkDestroyBuffer")), freeMemory(context.Function<PFN_vkFreeMemory>("vkFreeMemory")), maxSlots(std::max<std::size_t>(1, std::min<std::size_t>(MaxSlots(), context.limits.maxMemoryAllocationCount / 6u))) {
     smallTier.budget = smallBudget;
     largeTier.budget = budget;
-    deviceTier.budget = DeviceBudget();
+    deviceTier.budget = DeviceTierEnabled() ? DeviceBudget(context.memory) : 0;
 }
 
 BufferPool::~BufferPool() {
@@ -32,12 +40,22 @@ BufferPool::~BufferPool() {
     }
 }
 
-VkDeviceSize BufferPool::DeviceBudget() {
-    static const VkDeviceSize deviceBudget = [] {
+bool BufferPool::DeviceTierEnabled() {
+    static const bool enabled = [] {
         const char* value = std::getenv("APS5_STAGING_POOL_MIB");
-        return (value != nullptr ? std::strtoull(value, nullptr, 10) : 512ull) << 20u;
+        return value == nullptr || std::strtoull(value, nullptr, 10) != 0;
     }();
-    return deviceBudget;
+    return enabled;
+}
+
+VkDeviceSize BufferPool::DeviceBudget(const VkPhysicalDeviceMemoryProperties& memory) {
+    static const char* value = std::getenv("APS5_STAGING_POOL_MIB");
+    if (value != nullptr) return static_cast<VkDeviceSize>(std::strtoull(value, nullptr, 10)) << 20u;
+    VkDeviceSize largest = 0;
+    for (std::uint32_t heap = 0; heap < memory.memoryHeapCount && heap < VK_MAX_MEMORY_HEAPS; ++heap) {
+        if ((memory.memoryHeaps[heap].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) != 0) largest = std::max(largest, memory.memoryHeaps[heap].size);
+    }
+    return std::max<VkDeviceSize>(VkDeviceSize{512} << 20u, largest / 8u);
 }
 
 void BufferPool::destroy(const BufferAllocation& allocation) noexcept {
@@ -47,21 +65,35 @@ void BufferPool::destroy(const BufferAllocation& allocation) noexcept {
     freeMemory(device, allocation.memory, nullptr);
 }
 
-std::size_t BufferPool::Capacity(std::size_t bytes) {
-    static const bool exact = std::getenv("APS5_NO_BUFFER_CLASSES") != nullptr;
+bool BufferPool::DeviceTiered(VkMemoryPropertyFlags properties) {
+    return (properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0 && (properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0 && DeviceTierEnabled();
+}
+
+std::size_t BufferPool::Capacity(std::size_t bytes, VkMemoryPropertyFlags properties) {
     constexpr std::size_t smallest = 256;
-    if (exact || bytes >= classLimit) return bytes;
-    return std::max(smallest, std::bit_ceil(bytes));
+    if (exactSizes()) return bytes;
+    if (bytes < classLimit) return std::max(smallest, std::bit_ceil(bytes));
+    if (!DeviceTiered(properties)) return bytes;
+    const auto step = std::bit_floor(bytes) >> deviceClassBits;
+    return (bytes + step - 1) / step * step;
+}
+
+std::size_t BufferPool::NextCapacity(std::size_t capacity) {
+    return capacity < classLimit ? capacity * 2 : capacity + (std::bit_floor(capacity) >> deviceClassBits);
+}
+
+VkBufferUsageFlags BufferPool::Usage(VkBufferUsageFlags usage, VkMemoryPropertyFlags properties) {
+    return DeviceTiered(properties) ? usage | deviceUsage : usage;
 }
 
 BufferPool::Tier& BufferPool::tierFor(std::size_t capacity, VkMemoryPropertyFlags properties) {
-    if ((properties & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) != 0 && (properties & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == 0 && DeviceBudget() != 0) return deviceTier;
+    if (DeviceTiered(properties)) return deviceTier;
     return !sharedTiers() && capacity < classLimit ? smallTier : largeTier;
 }
 
 std::optional<BufferAllocation> BufferPool::Take(std::size_t bytes, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties) {
     static const bool profile = std::getenv("APS5_PROFILE_DRAW") != nullptr;
-    const auto capacity = Capacity(bytes);
+    const auto capacity = Capacity(bytes, properties);
     std::lock_guard lock(mutex);
     ++clock;
     if (profile) {
@@ -73,7 +105,9 @@ std::optional<BufferAllocation> BufferPool::Take(std::size_t bytes, VkBufferUsag
         }
     }
     auto& tier = tierFor(capacity, properties);
-    const auto found = tier.free.find({capacity, usage, properties});
+    const auto largest = &tier == &deviceTier && !exactSizes() && bytes <= std::numeric_limits<std::size_t>::max() / 2 ? std::max(capacity, bytes * 2) : capacity;
+    auto found = tier.free.end();
+    for (auto size = capacity; size <= largest && found == tier.free.end(); size = NextCapacity(size)) found = tier.free.find({size, usage, properties});
     if (found == tier.free.end() || found->second.empty()) {
         ++tier.misses;
         return std::nullopt;

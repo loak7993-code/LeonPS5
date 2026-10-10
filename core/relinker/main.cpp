@@ -13,6 +13,11 @@ int main(const int argc, char* argv[]) {
         return 1;
     }
 
+    if (args.showHelp) {
+        std::cout << Cli::Usage() << '\n';
+        return 0;
+    }
+
     try {
         return Cli::Convert(args);
     } catch (const Domain::RelinkerException& e) {

@@ -20,6 +20,8 @@ int APS5_VABI sceAudio3dPortFlush(std::uint32_t port_id);
 int APS5_VABI sceAudio3dObjectReserve(std::uint32_t port_id, std::uint32_t* object_id);
 int APS5_VABI sceAudio3dObjectUnreserve(std::uint32_t port_id, std::uint32_t object_id);
 int APS5_VABI sceAudio3dObjectSetAttributes(std::uint32_t port_id, std::uint32_t object_id, std::uint64_t num_attributes, const Audio3dAttribute* attribute_array);
+int APS5_VABI sceAudio3dBedWrite(std::uint32_t port_id, std::uint32_t num_channels, std::uint32_t format, void* buffer, std::uint32_t num_samples);
+int APS5_VABI sceAudio3dBedWrite2(std::uint32_t port_id, std::uint32_t num_channels, std::uint32_t format, void* buffer, std::uint32_t num_samples, std::uint32_t output_route, int restricted);
 }
 
 namespace {
@@ -249,6 +251,38 @@ void CheckObjectAttributes() {
     Require(sceAudio3dPortClose(0) == 0, "close");
 }
 
+void CheckBedWrite() {
+    Audio3dOpenParameters parameters = Defaults();
+    std::uint32_t id = 99;
+    Require(Open(parameters, &id) == 0 && id == 0, "open for the bed checks");
+    std::int16_t stereo[512] = {};
+    for (std::uint32_t i = 0; i < 256; ++i) stereo[2 * i] = static_cast<std::int16_t>(1000 + i);
+    Require(sceAudio3dBedWrite(0, 3, 0, stereo, 256) == INVALID_PARAMETER, "3 channels must be rejected");
+    Require(sceAudio3dBedWrite(0, 2, 9, stereo, 256) == INVALID_PARAMETER, "unknown format must be rejected");
+    Require(sceAudio3dBedWrite(0, 2, 0, nullptr, 256) == INVALID_PARAMETER, "a null buffer must be rejected");
+    Require(sceAudio3dBedWrite(0, 2, 0, stereo, 0) == INVALID_PARAMETER, "zero samples must be rejected");
+    char misaligned[512 + 1];
+    void* shifted = misaligned + 1;
+    Require(sceAudio3dBedWrite(0, 2, 0, shifted, 256) == INVALID_PARAMETER, "a misaligned buffer must be rejected");
+    for (int slot = 0; slot < 2; ++slot) {
+        Require(sceAudio3dBedWrite(0, 2, 0, stereo, 256) == 0, "a bed write must be queued");
+    }
+    const int notReady = static_cast<int>(0x80EA0007);
+    Require(sceAudio3dBedWrite2(0, 2, 0, stereo, 256, 0, 0) == notReady, "a third write must hit the queue depth of two");
+    Require(sceAudio3dBedWrite2(0, 2, 0, stereo, 256, 7, 0) == INVALID_PARAMETER, "an unknown output route must be rejected");
+    for (int slot = 0; slot < 2; ++slot) {
+        Require(sceAudio3dPortAdvance(0) == 0, "advance with queued bed data");
+        Require(sceAudio3dPortPush(0, 1) == 0, "push must output the bed frame without throwing");
+    }
+    Require(sceAudio3dPortFlush(0) == 0, "flush after the bed checks");
+    Require(sceAudio3dPortAdvance(0) == 0, "advance with an empty bed");
+    Require(sceAudio3dPortPush(0, 1) == 0, "push with an empty bed must output silence and not throw");
+    Require(sceAudio3dPortFlush(0) == 0, "flush after the silence check");
+    Require(sceAudio3dPortClose(0) == 0, "close after the bed checks");
+    Require(sceAudio3dTerminate() == 0, "terminate after the bed checks");
+    Require(sceAudio3dInitialize(0) == 0, "reinitialize after the bed checks");
+}
+
 void CheckTerminate() {
     std::uint32_t id = 7;
     const Audio3dOpenParameters parameters = Defaults();
@@ -275,5 +309,6 @@ int main() {
     CheckQueue();
     CheckFlush();
     CheckObjectAttributes();
+    CheckBedWrite();
     CheckTerminate();
 }

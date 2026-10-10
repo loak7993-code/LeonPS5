@@ -1,5 +1,6 @@
 add_library(libSceAudio3d SHARED EXCLUDE_FROM_ALL Export.cpp)
 target_include_directories(libSceAudio3d PRIVATE ${LIBS_INCLUDE_DIR})
+target_link_libraries(libSceAudio3d PRIVATE libSceAudioOut)
 configure_windows_unwind(libSceAudio3d)
 
 if(BUILD_TESTING)

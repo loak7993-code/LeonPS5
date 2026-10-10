@@ -193,8 +193,9 @@ std::string_view UnsupportedReason(std::uint32_t header) {
         case 0x24: case 0x25: case 0x2c: case 0x38:
             if (IndirectDrawsDisabled()) return "graphics draw, shader stages and guest render-target materialization are not implemented";
             return {};
-        case 0x3a: case 0x8d:
-            return "graphics draw, shader stages and guest render-target materialization are not implemented";
+        case 0x3a: return {};
+        case 0x8d:
+            return "the dispatch-draw packet layout is unverified, so it is rejected instead of drawing garbage";
         case 0x33: case 0x3f: return "nested command buffers, branching and nested flip reservation are not implemented";
         case 0x3c: case 0x93: return {};
         case 0x39:
@@ -297,6 +298,13 @@ void Validate(std::span<const std::uint32_t> packet, std::uint32_t queue) {
             graphics();
             size(3);
             require((packet[2] & ~0x20u) == 2u, "unsupported auto draw flags");
+            break;
+        case 0x3a:
+            graphics();
+            require(packet.size() >= 9u, "DRAW_INDEX_MULTI_INSTANCED is shorter than its 9-word header");
+            require(packet[4] != 0u, "the instance count is zero");
+            require(packet.size() == 9u, "per-instance object data has no executor contract; expanding to one instanced draw is the only supported form");
+            require(packet[3] <= 0xffffu, "unsupported index address bits");
             break;
         case 0x35:
             graphics();
@@ -733,12 +741,13 @@ DrawParameters ResolveDraw(std::span<const std::uint32_t> packet, const QueueSta
         require(packet[1] == 0 || firstVertex <= std::numeric_limits<std::uint32_t>::max() - (packet[1] - 1u), "auto draw vertex range overflow");
         return {0, packet[1], 0, queue.instanceCount, packet[2] & 0x20u, false, firstVertex, 0};
     }
-    const bool explicitAddress = ((packet[0] >> 8u) & 0xffu) == 0x27;
-    require(explicitAddress || ((packet[0] >> 8u) & 0xffu) == 0x35, "expected indexed draw packet");
+    const auto opcode = (packet[0] >> 8u) & 0xffu;
+    const bool explicitAddress = opcode == 0x27 || opcode == 0x3a;
+    require(explicitAddress || opcode == 0x35, "expected indexed draw packet");
     require(queue.indexType <= 2, "unsupported index type");
     const std::uint32_t indexSize = queue.indexType == 0 ? 2 : queue.indexType == 1 ? 4 : 1;
     const auto base = explicitAddress ? address(packet[2], packet[3]) : queue.indexBase;
-    const auto count = explicitAddress ? packet[4] : packet[3];
+    const auto count = explicitAddress ? (opcode == 0x3a ? packet[1] : packet[4]) : packet[3];
     require(base != 0 && base % indexSize == 0, "null or misaligned index base");
     const auto offset = explicitAddress ? 0 : static_cast<std::uint64_t>(packet[2]) * indexSize;
     require(offset <= std::numeric_limits<std::uint64_t>::max() - base, "index address overflow");
@@ -749,7 +758,9 @@ DrawParameters ResolveDraw(std::span<const std::uint32_t> packet, const QueueSta
     APS5_LOG_OUT_DEBUG("ResolveDraw context targetMask=0x%x shaderMask=0x%x indexCount=%u indexType=%u instances=%u", queue.context.contains(0x8e) ? queue.context.at(0x8e) : 0u, queue.context.contains(0x8f) ? queue.context.at(0x8f) : 0u, count, queue.indexType, queue.instanceCount);
     const auto indexOffset = queue.userConfig.find(0x24a);
     require(indexOffset != queue.userConfig.end(), "missing GE_INDX_OFFSET register");
-    return {address, count, indexSize, queue.instanceCount, packet.back(), true, indexOffset->second, 0};
+    const auto flags = opcode == 0x3a ? (packet[8] & 0x20u) : packet.back();
+    const auto instances = opcode == 0x3a ? packet[4] : queue.instanceCount;
+    return {address, count, indexSize, instances, flags, true, indexOffset->second, 0};
 }
 
 std::vector<std::uint32_t> ReadIndirectRegisters(std::span<const std::uint32_t> packet) {

@@ -73,6 +73,24 @@ void testCatalog() {
     for (const auto& [id, name] : custom) check(AgcDriver::Pm4::Name(makePacket(0x10, {0}, id << 2)[0]) == name, "custom opcode name mismatch");
 }
 
+void testDrawIndexMultiInstanced() {
+    alignas(4) std::array<std::uint32_t, 8> indices{};
+    AgcDriver::QueueState state;
+    state.indexType = 0;
+    state.indexBase = reinterpret_cast<std::uintptr_t>(indices.data());
+    state.userConfig[0x24a] = 0x140;
+    const std::uint32_t address = static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(indices.data()));
+    const std::uint32_t high = static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(indices.data()) >> 32u);
+    const std::vector<std::uint32_t> packet = makePacket(0x3a, {0x28, address, high, 3, 0, 0, 0, 0x20});
+    check(packet.size() == 9, "the 9-word multi-instanced draw was not built");
+    AgcDriver::Pm4::Validate(packet, 0);
+    const auto draw = AgcDriver::Pm4::ResolveDraw(packet, state);
+    check(draw.indexed && draw.indexAddress == state.indexBase && draw.indexCount == 0x28 && draw.instanceCount == 3 && draw.indexSize == 2 && draw.firstVertex == 0x140 && draw.flags == 0x20, "multi-instanced draw state mismatch");
+    expectFailure([&] { AgcDriver::Pm4::Validate(makePacket(0x3a, {0x28, address, high, 0, 0, 0, 0, 0x20}), 0); }, "the instance count is zero");
+    expectFailure([&] { AgcDriver::Pm4::Validate(makePacket(0x3a, {0x28, address, high, 3, 0, 0, 0, 0x20, 7}), 0); }, "per-instance object data has no executor contract");
+    expectFailure([&] { AgcDriver::Pm4::Validate(makePacket(0x3a, {0x28, address, high, 3, 0, 0, 0, 0x20}), 0x20); }, "graphics packet in compute queue");
+}
+
 void testNopPad() {
     check(AgcDriver::Pm4::PacketWords(0xffff1000u) == 1, "the one-dword NOP is not one dword");
     for (const auto queue : {0u, 0x20u}) AgcDriver::Pm4::Validate(std::vector<std::uint32_t>{0xffff1000u}, queue);
@@ -1033,6 +1051,7 @@ int main(int argc, char** argv) {
             return 0;
         }
         testCatalog();
+        testDrawIndexMultiInstanced();
         testNopPad();
         testWriteChangedKeepsUntouchedBytes();
         testRegisters();

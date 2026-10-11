@@ -1,14 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useState } from "react";
 import { Check, Copy, FolderOpen } from "@phosphor-icons/react";
-import { GameArt } from "./Art";
-import { iconUrl, type Game, type Library } from "./api";
-import type { Accent, Prefs } from "./prefs";
-import { Button } from "./ui/Button";
-import { Dialog } from "./ui/Dialog";
-import { IconButton } from "./ui/IconButton";
-import { Segmented } from "./ui/Segmented";
-import { Switch } from "./ui/Switch";
-import { TextField } from "./ui/TextField";
+import type { Library } from "../api";
+import { Button } from "../ui/Button";
+import { Dialog } from "../ui/Dialog";
+import { Segmented } from "../ui/Segmented";
+import { Switch } from "../ui/Switch";
+import { TextField } from "../ui/TextField";
+import type { Accent, Prefs } from "../prefs";
 
 const ACCENTS: Accent[] = ["blue", "cyan", "emerald", "orange", "red"];
 const ACCENT_HEX: Record<Accent, string> = {
@@ -135,6 +133,7 @@ export function SettingsSheet({
               {saving ? "Saving" : "Change"}
             </Button>
           </div>
+          {dirError && <p className="mt-2 text-left text-xs text-danger">{dirError}</p>}
         </div>
         <Row label="Copy path">
           <button
@@ -179,142 +178,8 @@ export function SettingsSheet({
           <Button variant="secondary" icon={<FolderOpen size={16} weight="bold" />} onClick={onOpenFolder}>
             Open folder
           </Button>
-          <Button data-autofocus onClick={onRescan}>Rescan library</Button>
-        </div>
-      </div>
-    </Dialog>
-  );
-}
-
-type GridSheetProps = {
-  games: Game[];
-  index: number;
-  onIndex: (index: number) => void;
-  onActivate: (game: Game) => void;
-  onClose: () => void;
-};
-
-export function GridSheet({ games, index, onIndex, onActivate, onClose }: GridSheetProps) {
-  const selectedRef = useRef<HTMLButtonElement>(null);
-  const columns = useMemo(
-    () => Math.max(1, Math.floor((typeof window === "undefined" ? 1280 : window.innerWidth - 96) / 174)),
-    [],
-  );
-
-  useEffect(() => {
-    selectedRef.current?.scrollIntoView({ block: "nearest" });
-  }, [index]);
-
-  useEffect(() => {
-    const handler = (event: KeyboardEvent): void => {
-      if (event.key === "ArrowLeft") onIndex(Math.max(0, index - 1));
-      else if (event.key === "ArrowRight") onIndex(Math.min(games.length - 1, index + 1));
-      else if (event.key === "ArrowUp") onIndex(Math.max(0, index - columns));
-      else if (event.key === "ArrowDown") onIndex(Math.min(games.length - 1, index + columns));
-      else if (event.key === "Enter" && games[index]) onActivate(games[index]);
-      else if (event.key === "Escape") onClose();
-      else return;
-      event.preventDefault();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [index, columns, games, onIndex, onActivate, onClose]);
-
-  return (
-    <Dialog
-      open
-      onClose={onClose}
-      wide
-      title={`Library · ${games.length} ${games.length === 1 ? "title" : "titles"}`}
-    >
-      <div className="max-h-[62vh] overflow-y-auto p-6">
-        <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(158px, 1fr))" }}>
-          {games.map((game, position) => (
-            <button
-              key={game.id}
-              ref={position === index ? selectedRef : undefined}
-              type="button"
-              onMouseEnter={() => onIndex(position)}
-              onFocus={() => onIndex(position)}
-              onClick={() => onActivate(game)}
-              className="flex flex-col gap-2 rounded-xl p-1 text-left transition-colors"
-            >
-              <span
-                className={`relative block aspect-square w-full overflow-hidden rounded-xl bg-panel2 ${
-                  position === index
-                    ? "shadow-[0_0_0_2px_rgba(255,255,255,0.88)]"
-                    : "shadow-[0_0_0_1px_rgba(151,163,224,0.12)]"
-                }`}
-              >
-                {game.hasIcon ? (
-                  <img src={iconUrl(game.id)} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover" />
-                ) : (
-                  <GameArt id={game.id} title={game.title} className="absolute inset-0 h-full w-full" />
-                )}
-              </span>
-              <span className={`truncate text-xs ${position === index ? "text-text" : "text-muted"}`}>{game.title}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-    </Dialog>
-  );
-}
-
-type AboutSheetProps = { onClose: () => void; onGallery: () => void };
-
-export function AboutSheet({ onClose, onGallery }: AboutSheetProps) {
-  return (
-    <Dialog open onClose={onClose} title="About">
-      <div className="space-y-4 px-6 py-5 text-sm leading-relaxed text-muted">
-        <p>
-          LeonPS5 launcher is the home screen of the LeonPS5 project. It scans a games directory,
-          shows every title as a card and hands the selected folder to the leonps5 runner.
-        </p>
-        <div className="grid grid-cols-[auto_1fr] items-center gap-x-4 gap-y-2 text-xs">
-          <kbd className="justify-self-center rounded-md border border-line bg-white/5 px-2 py-1 font-mono text-text">Arrows</kbd>
-          <span>Navigate rows and cards</span>
-          <kbd className="justify-self-center rounded-md border border-line bg-white/5 px-2 py-1 font-mono text-text">Enter</kbd>
-          <span>Start the selected title</span>
-          <kbd className="justify-self-center rounded-md border border-line bg-white/5 px-2 py-1 font-mono text-text">Esc</kbd>
-          <span>Close panels and overlays</span>
-          <kbd className="justify-self-center rounded-md border border-line bg-white/5 px-2 py-1 font-mono text-text">Gamepad</kbd>
-          <span>D-pad or left stick, cross to start, circle to go back</span>
-        </div>
-        <p className="font-mono text-xs">
-          <a href="https://github.com/loak7993-code/LeonPS5" className="text-accent underline-offset-4 hover:underline">
-            github.com/loak7993-code/LeonPS5
-          </a>
-        </p>
-      </div>
-      <div className="flex justify-between border-t border-line px-6 py-4">
-        <Button variant="ghost" onClick={onGallery}>
-          Component gallery
-        </Button>
-        <IconButton label="Close" onClick={onClose} className="self-center">
-          <Check size={18} weight="bold" />
-        </IconButton>
-      </div>
-    </Dialog>
-  );
-}
-
-type PowerSheetProps = { onClose: () => void; onQuit: () => void };
-
-export function PowerSheet({ onClose, onQuit }: PowerSheetProps) {
-  return (
-    <Dialog open onClose={onClose} title="Power">
-      <div className="px-6 py-5">
-        <p className="text-sm text-muted">
-          Quitting stops the launcher server on this machine. Any title the runner is still
-          processing keeps running in the background.
-        </p>
-        <div className="mt-5 flex justify-end gap-3">
-          <Button variant="secondary" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button variant="danger" onClick={onQuit}>
-            Quit launcher
+          <Button data-autofocus onClick={onRescan}>
+            Rescan library
           </Button>
         </div>
       </div>

@@ -300,7 +300,7 @@ function GalleryBody() {
   );
 }
 
-export function Gallery() {
+export default function Gallery() {
   return (
     <motion.div
       className="h-full overflow-y-auto"

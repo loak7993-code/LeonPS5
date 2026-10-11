@@ -99,20 +99,37 @@ def resolve_runner(explicit):
     return None
 
 
-def suggestions():
+def suggestion_paths():
     home = Path.home()
-    common = [
+    return [
         home / "Games" / "LeonPS5",
         home / "Games",
         home / "Downloads" / "LeonPS5",
         home / "games" / "ps5",
-        Path("/mnt/c/Users") if sys.platform.startswith("linux") else Path.home(),
+        Path("/mnt/c/Users") if sys.platform.startswith("linux") else home,
     ]
+
+
+def suggestions():
     found = []
-    for candidate in common:
+    for candidate in suggestion_paths():
         if candidate.is_dir() and candidate not in found:
             found.append(candidate)
     return [str(path) for path in found]
+
+
+def demo_games():
+    return [
+        {
+            "id": f"demo-{title.lower().replace(' ', '-')}",
+            "folder": f"sample-{position + 1}",
+            "title": title,
+            "hasIcon": False,
+            "lastPlayed": None,
+            "demo": True,
+        }
+        for position, title in enumerate(DEMO_TITLES)
+    ]
 
 
 def open_folder(directory):
@@ -137,6 +154,7 @@ class Library:
         self.lock = threading.Lock()
         self.games = []
         self.played = {}
+        self.suggestions_cache = suggestions()
         self.load_state()
         self.scan()
 
@@ -146,6 +164,7 @@ class Library:
         with self.lock:
             self.games_dir = path
             self.played = {}
+        self.suggestions_cache = suggestions()
         self.load_state()
         self.scan()
 
@@ -209,20 +228,10 @@ class Library:
     def payload(self, demo=False):
         with self.lock:
             games = [dict(item, lastPlayed=self.played.get(item["id"])) for item in self.games]
-        if demo:
-            games = [
-                {
-                    "id": f"demo-{title.lower().replace(' ', '-')}",
-                    "folder": f"sample-{position + 1}",
-                    "title": title,
-                    "hasIcon": False,
-                    "lastPlayed": None,
-                    "demo": True,
-                }
-                for position, title in enumerate(DEMO_TITLES)
-            ]
-        with self.lock:
             extra = list(self.extra_args)
+            cached_suggestions = self.suggestions_cache
+        if demo:
+            games = demo_games()
         return {
             "games": games,
             "gamesDir": str(self.games_dir),
@@ -230,7 +239,7 @@ class Library:
             "runnerPath": str(self.runner) if self.runner else None,
             "extraArgs": extra,
             "configPath": str(config_path()),
-            "suggestions": suggestions(),
+            "suggestions": cached_suggestions,
             "version": VERSION,
         }
 
@@ -296,6 +305,15 @@ class Library:
         return {"status": "started", "command": " ".join(parts)}
 
 
+POST_ROUTES = {
+    "/api/scan": "post_scan",
+    "/api/launch": "post_launch",
+    "/api/config": "post_config",
+    "/api/open-folder": "post_open_folder",
+    "/api/quit": "post_quit",
+}
+
+
 class Handler(BaseHTTPRequestHandler):
     server_version = f"LeonPS5Launcher/{VERSION}"
     protocol_version = "HTTP/1.1"
@@ -330,8 +348,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path == "/api/games":
-            demo = parse_qs(parsed.query).get("demo", ["0"])[0] not in ("0", "", "false")
-            self.send_json(self.library.payload(demo=demo))
+            self.send_json(self.library.payload(demo=self.demo_flag(parsed)))
             return
         if parsed.path.startswith("/api/icon/"):
             self.send_icon(unquote(parsed.path[len("/api/icon/") :]))
@@ -340,42 +357,48 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         path = urlparse(self.path).path
-        if path == "/api/scan":
-            demo = parse_qs(urlparse(self.path).query).get("demo", ["0"])[0] not in ("0", "", "false")
-            self.library.scan()
-            self.send_json(self.library.payload(demo=demo))
+        method = POST_ROUTES.get(path)
+        if method is None:
+            self.send_json({"error": "Unknown endpoint"}, 404)
             return
-        if path == "/api/launch":
-            body = self.read_json()
-            game_id = str(body.get("id", "")) if isinstance(body, dict) else ""
-            if not game_id:
-                self.send_json({"error": "Missing title id"}, 400)
-                return
-            try:
-                self.send_json(self.library.launch(game_id))
-            except LaunchError as error:
-                self.send_json({"error": str(error)}, 409)
-            except Exception as error:
-                self.send_json({"error": f"Launcher error: {error}"}, 500)
+        getattr(self, method)()
+
+    def demo_flag(self, parsed):
+        return parse_qs(parsed.query).get("demo", ["0"])[0] not in ("0", "", "false")
+
+    def post_scan(self):
+        self.library.scan()
+        self.send_json(self.library.payload(demo=self.demo_flag(urlparse(self.path))))
+
+    def post_launch(self):
+        body = self.read_json()
+        game_id = str(body.get("id", "")) if isinstance(body, dict) else ""
+        if not game_id:
+            self.send_json({"error": "Missing title id"}, 400)
             return
-        if path == "/api/config":
-            body = self.read_json()
-            if not isinstance(body, dict):
-                self.send_json({"error": "Invalid config payload"}, 400)
-                return
-            try:
-                self.send_json(self.library.apply_config(body))
-            except LaunchError as error:
-                self.send_json({"error": str(error)}, 409)
+        try:
+            self.send_json(self.library.launch(game_id))
+        except LaunchError as error:
+            self.send_json({"error": str(error)}, 409)
+        except Exception as error:
+            self.send_json({"error": f"Launcher error: {error}"}, 500)
+
+    def post_config(self):
+        body = self.read_json()
+        if not isinstance(body, dict):
+            self.send_json({"error": "Invalid config payload"}, 400)
             return
-        if path == "/api/open-folder":
-            self.send_json(open_folder(self.library.games_dir))
-            return
-        if path == "/api/quit":
-            self.send_json({"ok": True})
-            threading.Timer(0.3, self.server_ref.shutdown).start()
-            return
-        self.send_json({"error": "Unknown endpoint"}, 404)
+        try:
+            self.send_json(self.library.apply_config(body))
+        except LaunchError as error:
+            self.send_json({"error": str(error)}, 409)
+
+    def post_open_folder(self):
+        self.send_json(open_folder(self.library.games_dir))
+
+    def post_quit(self):
+        self.send_json({"ok": True})
+        threading.Timer(0.3, self.server_ref.shutdown).start()
 
     def send_icon(self, game_id):
         if not game_id or game_id in (".", "..") or "/" in game_id or "\\" in game_id:

@@ -26,7 +26,21 @@ src/
     EmptyState   icon, title, body, actions, note
     useFocusTrap focus containment hook shared by Dialog and Onboarding
     index.ts     the public barrel
+  state/         app state hooks, one concern each, no rendering
+    useLauncherData   library fetch with one retry, load error, apply
+    useLibraryFilter  query, sort and the filtered list
+    useLauncherNav    the three-row state machine, keyboard and gamepad feed it
+    useLaunchFlow     the launch overlay lifecycle with its auto-close timer
+    navigation.ts     the NavHandlers shape
+  sheets/        Settings, LibraryGrid, AboutPower panels on ui.Dialog
+  App.tsx        composition: wires data, filter, nav and launch together
+  Row.tsx        the card rail (memoized Card, measured width hook)
 ```
+
+The server side mirrors this split: `Library` owns scanning, play state and
+launching, `POST_ROUTES` is the routing table the handler dispatches through,
+and `tools/launcher/test_server.py` exercises every endpoint over real HTTP
+against fixture directories (`python3 tools/launcher/test_server.py`).
 
 Rules that keep the kit reusable:
 

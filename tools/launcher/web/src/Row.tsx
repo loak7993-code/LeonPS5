@@ -1,11 +1,55 @@
+import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
 import { GameArt } from "./Art";
 import { iconUrl, type Game } from "./api";
 import { relativeTime } from "./data";
 
 const GAP = 18;
 const LEAD = 72;
+
+type CardProps = {
+  game: Game;
+  selected: boolean;
+  onSelect: (id: string) => void;
+  onActivate: (game: Game) => void;
+};
+
+const Card = memo(function Card({ game, selected, onSelect, onActivate }: CardProps) {
+  return (
+    <motion.button
+      type="button"
+      aria-label={game.demo ? `${game.title}, demo title` : game.title}
+      onMouseEnter={() => onSelect(game.id)}
+      onFocus={() => onSelect(game.id)}
+      onClick={() => onActivate(game)}
+      className={`relative aspect-square w-[var(--card-w)] shrink-0 overflow-hidden rounded-[14px] bg-panel ${
+        selected ? "card-selected" : "shadow-[0_0_0_1px_rgba(151,163,224,0.12)]"
+      }`}
+      animate={{ scale: selected ? 1.08 : 1, y: selected ? -6 : 0 }}
+      transition={{ type: "spring", stiffness: 260, damping: 22 }}
+    >
+      {game.hasIcon ? (
+        <img src={iconUrl(game.id)} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover" />
+      ) : (
+        <GameArt id={game.id} title={game.title} className="absolute inset-0 h-full w-full" />
+      )}
+    </motion.button>
+  );
+});
+
+function useCardWidth(railRef: React.RefObject<HTMLDivElement | null>, count: number): number {
+  const [cardWidth, setCardWidth] = useState(216);
+
+  useEffect(() => {
+    const element = railRef.current?.firstElementChild;
+    if (!element) return;
+    const observer = new ResizeObserver(() => setCardWidth(element.clientWidth));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [railRef, count]);
+
+  return cardWidth;
+}
 
 type RailProps = {
   games: Game[];
@@ -15,55 +59,19 @@ type RailProps = {
   onActivate: (game: Game) => void;
 };
 
-function Card({
-  game,
-  selected,
-  onSelect,
-  onActivate,
-}: {
-  game: Game;
-  selected: boolean;
-  onSelect: () => void;
-  onActivate: () => void;
-}) {
-  return (
-    <motion.button
-      type="button"
-      aria-label={game.demo ? `${game.title}, demo title` : game.title}
-      onMouseEnter={onSelect}
-      onFocus={onSelect}
-      onClick={onActivate}
-      className={`relative aspect-square w-[var(--card-w)] shrink-0 overflow-hidden rounded-[14px] bg-panel ${
-        selected ? "card-selected" : "shadow-[0_0_0_1px_rgba(151,163,224,0.12)]"
-      }`}
-      animate={{ scale: selected ? 1.08 : 1, y: selected ? -6 : 0 }}
-      transition={{ type: "spring", stiffness: 260, damping: 22 }}
-    >
-      {game.hasIcon ? (
-        <img
-          src={iconUrl(game.id)}
-          alt=""
-          draggable={false}
-          className="absolute inset-0 h-full w-full object-cover"
-        />
-      ) : (
-        <GameArt id={game.id} title={game.title} className="absolute inset-0 h-full w-full" />
-      )}
-    </motion.button>
-  );
-}
-
 export function Rail({ games, index, searching, onSelect, onActivate }: RailProps) {
   const railRef = useRef<HTMLDivElement>(null);
-  const [cardWidth, setCardWidth] = useState(216);
+  const cardWidth = useCardWidth(railRef, games.length);
 
-  useEffect(() => {
-    const element = railRef.current?.firstElementChild;
-    if (!element) return;
-    const observer = new ResizeObserver(() => setCardWidth(element.clientWidth));
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [games.length]);
+  const selectById = useCallback(
+    (id: string) => {
+      const at = games.findIndex((game) => game.id === id);
+      if (at >= 0) onSelect(at);
+    },
+    [games, onSelect],
+  );
+
+  const activate = useCallback((game: Game) => onActivate(game), [onActivate]);
 
   const selected = games[index] ?? null;
   const step = cardWidth + GAP;
@@ -107,8 +115,8 @@ export function Rail({ games, index, searching, onSelect, onActivate }: RailProp
                   key={game.id}
                   game={game}
                   selected={position === index && !searching}
-                  onSelect={() => onSelect(position)}
-                  onActivate={() => onActivate(game)}
+                  onSelect={selectById}
+                  onActivate={activate}
                 />
               ))}
             </motion.div>

@@ -6,7 +6,7 @@ import zipfile
 from pathlib import Path
 
 
-def package(platform, build, output, version):
+def package(platform, build, output, version, mingw_bin=None):
     if not re.fullmatch(r"v[0-9A-Za-z][0-9A-Za-z._-]*", version) or version.endswith("."):
         raise ValueError(f"Invalid release tag for asset filenames: {version}")
     libraries = sorted((build / "core/libs/libs").glob("*.prx"))
@@ -17,7 +17,7 @@ def package(platform, build, output, version):
     executable = "relinker.exe" if platform == "windows" else "relinker"
     files = list(libraries)
     if platform == "windows":
-        runtime = Path("C:/winlibs/mingw64/bin")
+        runtime = Path(mingw_bin) if mingw_bin else Path("C:/winlibs/mingw64/bin")
         files.extend(runtime / name for name in ("libgcc_s_seh-1.dll", "libstdc++-6.dll", "libwinpthread-1.dll"))
     binary = build / "core/relinker" / executable
     for file in [*files, binary]:
@@ -55,6 +55,7 @@ def main():
     parser.add_argument("--version")
     parser.add_argument("--docs", type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--mingw-bin", type=Path)
     args = parser.parse_args()
     if args.docs is not None:
         if args.platform is not None or args.build is not None or args.version is not None:
@@ -63,7 +64,7 @@ def main():
     else:
         if args.platform is None or args.build is None or args.version is None:
             parser.error("--platform, --build and --version are required when --docs is not specified")
-        package(args.platform, args.build, args.output, args.version)
+        package(args.platform, args.build, args.output, args.version, args.mingw_bin)
 
 
 if __name__ == "__main__":

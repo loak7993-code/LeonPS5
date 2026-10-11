@@ -161,15 +161,15 @@ def package_linux(version, output):
         encoding="utf-8",
     )
     apprun.chmod(apprun.stat().st_mode | stat.S_IEXEC)
-    tool = output / "appimagetool.AppImage"
+    tool = (output / "appimagetool.AppImage").resolve()
     if not tool.is_file():
+        tool.parent.mkdir(parents=True, exist_ok=True)
         urllib.request.urlretrieve(APPIMAGE_TOOL_URL, tool)
     tool.chmod(tool.stat().st_mode | stat.S_IEXEC)
-    target = output / f"launcher-{version}.AppImage"
+    target = (output / f"launcher-{version}.AppImage").resolve()
     subprocess.run(
-        [str(tool), "--appimage-extract-and-run", str(appdir), str(target), "-n"],
+        [str(tool), "--appimage-extract-and-run", str(appdir.resolve()), str(target), "-n"],
         check=True,
-        cwd=str(output),
     )
     target.chmod(target.stat().st_mode | stat.S_IEXEC)
     print(f"AppImage: {target}")

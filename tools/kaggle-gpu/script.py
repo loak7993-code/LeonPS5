@@ -7,21 +7,20 @@ import subprocess
 import sys
 
 STEPS = [
-    # Toolchain. Kaggle images ship Python but not the guest-build toolchain.
-    "apt-get update -qq",
-    "apt-get install -yqq git cmake ninja-build g++ libx11-dev libxext-dev "
-    "python3 mesa-vulkan-drivers vulkan-tools",
-    # The fork and the submodules the guest build needs.
-    "git clone --depth 1 https://github.com/loak7993-code/LeonPS5.git /kaggle/LeonPS5",
-    "cd /kaggle/LeonPS5 && git submodule update --init --recursive "
-    "core/libs core/relinker 3rdparty/SDL2 3rdparty/freetype 3rdparty/libjpeg-turbo "
-    "3rdparty/stb 3rdparty/ffmpeg-core 3rdparty/LibAtrac9",
+    # Toolchain check. The Kaggle GPU image ships git, cmake, ninja and g++
+    # already; the guest build needs nothing beyond them.
+    "which git cmake ninja g++",
+    # The source tree comes from the attached dataset (the kernel has no
+    # internet, so nothing is cloned).
+    "cp -a /kaggle/input/leonps5-source/leonps5-src /kaggle/LeonPS5",
+    "cp -a /kaggle/input/leonps5-source/ffmpeg-prebuilt /kaggle/ffmpeg-prebuilt",
     # Vulkan report first: which device did the runtime give us.
-    "vulkaninfo --summary > /kaggle/working/vulkan-summary.txt 2>&1 || true",
-    "cat /kaggle/working/vulkan-summary.txt | grep -E 'deviceName|deviceType' || true",
+    "python3 -c \"import shutil; print(shutil.which('vulkaninfo'))\" || true",
+    "(vulkaninfo --summary > /kaggle/working/vulkan-summary.txt 2>&1 || true)",
+    "cat /kaggle/working/vulkan-summary.txt 2>/dev/null | grep -E 'deviceName|deviceType' || true",
     # Release build.
     "cd /kaggle/LeonPS5 && cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release "
-    "-DBUILD_TESTING=ON",
+    "-DBUILD_TESTING=ON -DFFMPEG_PREBUILT_DIR=/kaggle/ffmpeg-prebuilt",
     "cd /kaggle/LeonPS5 && cmake --build build --parallel 2",
     # The full suite. Kaggle GPUs are T4/L4; the mesh tests skip or run per the
     # device's mesh-shader support and the summary shows which.

@@ -103,3 +103,24 @@ body {
     animation: none;
   }
 }
+
+html[data-motion="reduced"] .ribbon-a,
+html[data-motion="reduced"] .ribbon-b,
+html[data-motion="reduced"] .shimmer::after {
+  animation: none;
+}
+
+.well {
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background: color-mix(in oklab, var(--color-panel) 70%, transparent);
+}
+
+input[type="text"],
+input[type="search"] {
+  color: var(--color-text);
+}
+
+input[type="text"]::placeholder {
+  color: color-mix(in oklab, var(--color-muted) 70%, transparent);
+}

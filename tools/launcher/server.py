@@ -39,6 +39,33 @@ class LaunchError(Exception):
     pass
 
 
+def config_path():
+    base = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
+    return Path(base) / "leonps5-launcher" / "config.json"
+
+
+def load_config():
+    try:
+        data = json.loads(config_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    args = data.get("extraArgs")
+    extra = [str(item) for item in args if str(item).strip()] if isinstance(args, list) else []
+    games = data.get("gamesDir")
+    return {"gamesDir": str(games) if isinstance(games, str) and games else None, "extraArgs": extra}
+
+
+def save_config(config):
+    try:
+        path = config_path()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(config, indent=1), encoding="utf-8")
+    except OSError:
+        pass
+
+
 def find_title(data):
     if isinstance(data, dict):
         for key in ("TITLE", "title", "Title"):
@@ -72,6 +99,22 @@ def resolve_runner(explicit):
     return None
 
 
+def suggestions():
+    home = Path.home()
+    common = [
+        home / "Games" / "LeonPS5",
+        home / "Games",
+        home / "Downloads" / "LeonPS5",
+        home / "games" / "ps5",
+        Path("/mnt/c/Users") if sys.platform.startswith("linux") else Path.home(),
+    ]
+    found = []
+    for candidate in common:
+        if candidate.is_dir() and candidate not in found:
+            found.append(candidate)
+    return [str(path) for path in found]
+
+
 def open_folder(directory):
     openers = {"darwin": ["open"], "win32": ["explorer"]}
     opener = openers.get(sys.platform)
@@ -90,11 +133,25 @@ class Library:
     def __init__(self, games_dir, runner):
         self.games_dir = Path(games_dir).expanduser()
         self.runner = runner
+        self.extra_args = []
         self.lock = threading.Lock()
         self.games = []
         self.played = {}
         self.load_state()
         self.scan()
+
+    def set_games_dir(self, games_dir):
+        path = Path(games_dir).expanduser()
+        path.mkdir(parents=True, exist_ok=True)
+        with self.lock:
+            self.games_dir = path
+            self.played = {}
+        self.load_state()
+        self.scan()
+
+    def set_extra_args(self, args):
+        with self.lock:
+            self.extra_args = list(args)
 
     def state_path(self):
         return self.games_dir / ".leonps5-launcher" / "state.json"
@@ -164,13 +221,43 @@ class Library:
                 }
                 for position, title in enumerate(DEMO_TITLES)
             ]
+        with self.lock:
+            extra = list(self.extra_args)
         return {
             "games": games,
             "gamesDir": str(self.games_dir),
             "runnerFound": self.runner is not None,
             "runnerPath": str(self.runner) if self.runner else None,
+            "extraArgs": extra,
+            "configPath": str(config_path()),
+            "suggestions": suggestions(),
             "version": VERSION,
         }
+
+    def apply_config(self, body):
+        games = body.get("gamesDir")
+        args = body.get("extraArgs")
+        with self.lock:
+            extra = self.extra_args
+        if isinstance(games, str) and games.strip():
+            target = Path(games.strip()).expanduser()
+            try:
+                target.mkdir(parents=True, exist_ok=True)
+            except OSError as error:
+                raise LaunchError(f"Cannot use the games directory {target}: {error}") from error
+            if not os.access(target, os.R_OK | os.X_OK):
+                raise LaunchError(f"Cannot read the games directory {target}")
+            if target != self.games_dir:
+                self.set_games_dir(target)
+        if isinstance(args, list):
+            cleaned = [str(item).strip() for item in args if str(item).strip()]
+            if len(cleaned) > 16:
+                raise LaunchError("Too many runner arguments, at most 16")
+            self.set_extra_args(cleaned)
+            extra = cleaned
+        config = {"gamesDir": str(self.games_dir), "extraArgs": list(extra)}
+        save_config(config)
+        return {**self.payload(), "saved": config}
 
     def launch(self, game_id):
         if game_id.startswith("demo-"):
@@ -190,7 +277,7 @@ class Library:
             log_dir.mkdir(parents=True, exist_ok=True)
             log = open(log_dir / "run.log", "ab")
             process = subprocess.Popen(
-                [str(self.runner), str(folder)],
+                [str(self.runner), *self.extra_args, str(folder)],
                 stdout=log,
                 stderr=subprocess.STDOUT,
                 cwd=str(self.games_dir),
@@ -205,7 +292,8 @@ class Library:
         with self.lock:
             self.played[game_id] = stamp
         self.save_state()
-        return {"status": "started", "command": f"{Path(self.runner).name} {game['folder']}"}
+        parts = [Path(self.runner).name, *extra, game["folder"]]
+        return {"status": "started", "command": " ".join(parts)}
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -268,6 +356,16 @@ class Handler(BaseHTTPRequestHandler):
             except LaunchError as error:
                 self.send_json({"error": str(error)}, 409)
             return
+        if path == "/api/config":
+            body = self.read_json()
+            if not isinstance(body, dict):
+                self.send_json({"error": "Invalid config payload"}, 400)
+                return
+            try:
+                self.send_json(self.library.apply_config(body))
+            except LaunchError as error:
+                self.send_json({"error": str(error)}, 409)
+            return
         if path == "/api/open-folder":
             self.send_json(open_folder(self.library.games_dir))
             return
@@ -327,10 +425,8 @@ class Handler(BaseHTTPRequestHandler):
 
 def main():
     parser = argparse.ArgumentParser(description="LeonPS5 home launcher server")
-    parser.add_argument(
-        "--games-dir",
-        default=os.environ.get("LEONPS5_GAMES_DIR", str(Path.home() / "Games" / "LeonPS5")),
-    )
+    parser.add_argument("--games-dir", default=os.environ.get("LEONPS5_GAMES_DIR"))
+    parser.add_argument("--no-config", action="store_true", help="ignore the saved launcher configuration")
     parser.add_argument("--port", type=int, default=8245)
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--web-dir", default=str(Path(__file__).resolve().parent / "web" / "dist"))
@@ -338,7 +434,9 @@ def main():
     parser.add_argument("--open", action="store_true", help="open the launcher in the default browser")
     args = parser.parse_args()
 
-    games_dir = Path(args.games_dir).expanduser()
+    stored = {} if args.no_config else load_config()
+    chosen = args.games_dir or stored["gamesDir"] or str(Path.home() / "Games" / "LeonPS5")
+    games_dir = Path(chosen).expanduser()
     try:
         games_dir.mkdir(parents=True, exist_ok=True)
     except OSError as error:
@@ -346,12 +444,14 @@ def main():
         return 1
     runner = resolve_runner(args.runner)
     Handler.library = Library(games_dir, runner)
+    Handler.library.set_extra_args(stored["extraArgs"])
     Handler.web_dir = Path(args.web_dir).expanduser().resolve()
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     Handler.server_ref = server
 
     print(f"LeonPS5 launcher {VERSION} on http://{args.host}:{args.port}")
     print(f"Games directory: {games_dir}")
+    print(f"Config file: {config_path()}")
     print(f"Runner: {runner if runner else 'not found (launching is disabled)'}")
     if args.open:
         webbrowser.open(f"http://{args.host}:{args.port}")

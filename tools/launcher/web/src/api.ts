@@ -12,6 +12,9 @@ export type Library = {
   gamesDir: string;
   runnerFound: boolean;
   runnerPath: string | null;
+  extraArgs: string[];
+  configPath: string;
+  suggestions: string[];
   version: string;
 };
 
@@ -49,6 +52,19 @@ export function launchGame(id: string): Promise<{ status: string; command: strin
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id }),
   }).then((r) => parse<{ status: string; command: string }>(r));
+}
+
+export type SavedConfig = { gamesDir: string; extraArgs: string[] };
+
+export function saveConfig(payload: {
+  gamesDir?: string;
+  extraArgs?: string[];
+}): Promise<Library & { saved: SavedConfig }> {
+  return fetch("/api/config", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).then((r) => parse<Library & { saved: SavedConfig }>(r));
 }
 
 export function openGamesFolder(): Promise<{ ok: boolean; error?: string }> {

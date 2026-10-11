@@ -12,6 +12,8 @@ import { BottomBar } from "./BottomBar";
 import { EmptyState } from "./EmptyState";
 import { LaunchOverlay, StoppedScreen, type LaunchPhase } from "./LaunchOverlay";
 import { AboutSheet, GridSheet, PowerSheet, SettingsSheet } from "./Sheets";
+import { Onboarding } from "./Onboarding";
+import { usePrefs } from "./prefs";
 
 type Overlay = "settings" | "about" | "power" | "grid" | "launch" | null;
 
@@ -89,6 +91,10 @@ export default function App() {
   const [gridIndex, setGridIndex] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
   const [stopped, setStopped] = useState(false);
+  const [onboarding, setOnboarding] = useState(
+    () => window.localStorage.getItem("leonps5-onboarded") !== "done",
+  );
+  const [prefs, setPref] = usePrefs();
 
   const searchRef = useRef<HTMLInputElement>(null);
   const launchTimer = useRef(0);
@@ -206,6 +212,20 @@ export default function App() {
     [demo, showToast],
   );
 
+  const closeOnboarding = useCallback(() => {
+    window.localStorage.setItem("leonps5-onboarded", "done");
+    setOnboarding(false);
+  }, []);
+
+  const saveDir = useCallback(
+    async (dir: string) => {
+      const next = await api.saveConfig({ gamesDir: dir });
+      setLibrary(next);
+      setLoadError(null);
+    },
+    [],
+  );
+
   const openGrid = useCallback(() => {
     setGridIndex(Math.min(cardIndex, Math.max(0, games.length - 1)));
     setOverlay("grid");
@@ -301,11 +321,8 @@ export default function App() {
   const gamesEmpty = library !== null && library.games.length === 0 && !demo;
 
   return (
-    <div
-      className="flex h-full flex-col"
-      style={{ ["--card-w" as string]: "clamp(148px, 17vw, 224px)" }}
-    >
-      <Background game={overlay === null ? selected : null} />
+    <div className="flex h-full flex-col">
+      <Background game={overlay === null && prefs.backdrop ? selected : null} />
       <TopBar
         ref={searchRef}
         index={row === 0 ? topIndex : -1}
@@ -359,6 +376,14 @@ export default function App() {
         onOpenFolder={openFolder}
         onAbout={() => setOverlay("about")}
       />
+      {onboarding && library && !demo && (
+        <Onboarding
+          library={library}
+          onSaveDir={saveDir}
+          onDemo={() => setDemo(true)}
+          onClose={closeOnboarding}
+        />
+      )}
       <AnimatePresence>
         {toast && (
           <motion.div
@@ -382,6 +407,9 @@ export default function App() {
             onRescan={rescan}
             onOpenFolder={openFolder}
             onToast={showToast}
+            onSaveDir={saveDir}
+            prefs={prefs}
+            onPref={setPref}
           />
         )}
         {overlay === "about" && <AboutSheet key="about" onClose={() => setOverlay(null)} />}

@@ -3,6 +3,7 @@ import { motion } from "motion/react";
 import { X, Copy, Check, FolderOpen, ArrowSquareOut } from "@phosphor-icons/react";
 import { GameArt } from "./Art";
 import { iconUrl, type Game, type Library } from "./api";
+import type { Accent, Prefs } from "./prefs";
 
 type SheetProps = {
   title: string;
@@ -69,14 +70,166 @@ type SettingsSheetProps = {
   onRescan: () => void;
   onOpenFolder: () => void;
   onToast: (message: string) => void;
+  onSaveDir: (dir: string) => Promise<void>;
+  prefs: Prefs;
+  onPref: <K extends keyof Prefs>(key: K, value: Prefs[K]) => void;
 };
 
-export function SettingsSheet({ library, onClose, onRescan, onOpenFolder, onToast }: SettingsSheetProps) {
+const ACCENTS: Accent[] = ["blue", "cyan", "emerald", "orange", "red"];
+const ACCENT_HEX: Record<Accent, string> = {
+  blue: "#2f6bff",
+  cyan: "#2bb8d6",
+  emerald: "#2fb87a",
+  orange: "#e08a3c",
+  red: "#e0524f",
+};
+
+function Segmented<T extends string>({
+  value,
+  options,
+  onChange,
+  label,
+}: {
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (value: T) => void;
+  label: string;
+}) {
+  return (
+    <div role="group" aria-label={label} className="inline-flex rounded-lg border border-line p-0.5">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onChange(option.value)}
+          className={`h-8 rounded-md px-3 text-xs transition-colors ${
+            option.value === value ? "bg-accent text-white" : "text-muted hover:text-text"
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function Toggle({ on, onChange, label }: { on: boolean; onChange: (on: boolean) => void; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      onClick={() => onChange(!on)}
+      className={`relative h-6 w-11 rounded-full transition-colors ${on ? "bg-accent" : "bg-white/15"}`}
+    >
+      <span
+        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+          on ? "translate-x-5" : "translate-x-0.5"
+        }`}
+      />
+    </button>
+  );
+}
+
+export function SettingsSheet({
+  library,
+  onClose,
+  onRescan,
+  onOpenFolder,
+  onToast,
+  onSaveDir,
+  prefs,
+  onPref,
+}: SettingsSheetProps) {
   const [copied, setCopied] = useState(false);
+  const [dir, setDir] = useState(library.gamesDir);
+  const [saving, setSaving] = useState(false);
+  const [dirError, setDirError] = useState<string | null>(null);
   return (
     <Sheet title="Settings" onClose={onClose}>
       <div>
-        <Row label="Games directory">
+        <Row label="Accent">
+          <div className="flex items-center justify-end gap-2">
+            {ACCENTS.map((accent) => (
+              <button
+                key={accent}
+                type="button"
+                aria-label={`Accent ${accent}`}
+                aria-pressed={prefs.accent === accent}
+                onClick={() => onPref("accent", accent)}
+                className={`h-6 w-6 rounded-full transition-transform ${
+                  prefs.accent === accent ? "scale-110 ring-2 ring-white/80" : "hover:scale-110"
+                }`}
+                style={{ background: ACCENT_HEX[accent] }}
+              />
+            ))}
+          </div>
+        </Row>
+        <Row label="Card size">
+          <Segmented
+            label="Card size"
+            value={prefs.cardSize}
+            onChange={(value) => onPref("cardSize", value)}
+            options={[
+              { value: "small", label: "S" },
+              { value: "medium", label: "M" },
+              { value: "large", label: "L" },
+            ]}
+          />
+        </Row>
+        <Row label="Motion">
+          <Segmented
+            label="Motion"
+            value={prefs.motion}
+            onChange={(value) => onPref("motion", value)}
+            options={[
+              { value: "full", label: "Full" },
+              { value: "reduced", label: "Reduced" },
+            ]}
+          />
+        </Row>
+        <Row label="Backdrop art">
+          <Toggle
+            label="Backdrop art"
+            on={prefs.backdrop}
+            onChange={(on) => onPref("backdrop", on)}
+          />
+        </Row>
+        <div className="border-b border-line px-6 py-3.5">
+          <div className="flex items-center justify-between gap-4">
+            <span className="shrink-0 text-sm text-muted">Games directory</span>
+            <span className="min-w-0 text-right text-sm">{library.gamesDir}</span>
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <input
+              type="text"
+              value={dir}
+              aria-label="Change games directory"
+              onChange={(event) => setDir(event.target.value)}
+              className="h-10 min-w-0 flex-1 rounded-lg border border-line bg-canvas/60 px-3 font-mono text-xs outline-none focus:border-accent"
+            />
+            <button
+              type="button"
+              disabled={saving || !dir.trim() || dir === library.gamesDir}
+              onClick={() => {
+                setSaving(true);
+                setDirError(null);
+                onSaveDir(dir)
+                  .then(() => onToast("Games directory saved"))
+                  .catch((reason: unknown) =>
+                    setDirError(reason instanceof Error ? reason.message : String(reason)),
+                  )
+                  .finally(() => setSaving(false));
+              }}
+              className="h-10 shrink-0 rounded-lg bg-accent px-4 text-sm font-medium text-white transition-transform enabled:active:scale-[0.98] disabled:opacity-40"
+            >
+              {saving ? "Saving" : "Change"}
+            </button>
+          </div>
+          {dirError && <p className="mt-2 text-left text-xs text-danger">{dirError}</p>}
+        </div>
+        <Row label="Copy path">
           <button
             type="button"
             onClick={() => {
@@ -101,6 +254,11 @@ export function SettingsSheet({ library, onClose, onRescan, onOpenFolder, onToas
           ) : (
             <span className="text-xs text-danger">leonps5 not found. Build it or set LEONPS5_RUNNER.</span>
           )}
+        </Row>
+        <Row label="Runner arguments">
+          <span className="font-mono text-xs text-text">
+            {library.extraArgs.length ? library.extraArgs.join(" ") : "none"}
+          </span>
         </Row>
         <Row label="Launcher version">
           <span className="font-mono text-xs text-text">{library.version}</span>

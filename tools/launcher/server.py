@@ -1,12 +1,15 @@
 import argparse
 import json
 import os
+import platform
 import shutil
 import subprocess
 import sys
 import threading
 import time
+import urllib.request
 import webbrowser
+import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
@@ -311,6 +314,7 @@ POST_ROUTES = {
     "/api/config": "post_config",
     "/api/open-folder": "post_open_folder",
     "/api/quit": "post_quit",
+    "/api/setup/install": "post_setup_install",
 }
 
 
@@ -319,6 +323,7 @@ class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
     library = None
     web_dir = None
+    web_source = None
     server_ref = None
 
     def log_message(self, format, *args):
@@ -349,6 +354,9 @@ class Handler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
         if parsed.path == "/api/games":
             self.send_json(self.library.payload(demo=self.demo_flag(parsed)))
+            return
+        if parsed.path == "/api/setup/status":
+            self.send_json(setup_status(self.web_dir, self.web_source))
             return
         if parsed.path.startswith("/api/icon/"):
             self.send_icon(unquote(parsed.path[len("/api/icon/") :]))
@@ -396,6 +404,14 @@ class Handler(BaseHTTPRequestHandler):
     def post_open_folder(self):
         self.send_json(open_folder(self.library.games_dir))
 
+    def post_setup_install(self):
+        if SETUP_JOB["state"] == "running":
+            self.send_json({"state": "running"})
+            return
+        reset_setup_job()
+        self.send_json({"state": "running"})
+        threading.Thread(target=run_setup, args=(self.web_source, self.library.games_dir), daemon=True).start()
+
     def post_quit(self):
         self.send_json({"ok": True})
         threading.Timer(0.3, self.server_ref.shutdown).start()
@@ -431,10 +447,11 @@ class Handler(BaseHTTPRequestHandler):
         if target is None:
             target = index
         if not target.is_file():
-            body = b"UI build missing: run npm run build in tools/launcher/web"
-            self.send_response(503)
-            self.send_header("Content-Type", "text/plain; charset=utf-8")
+            self.send_response(200)
+            body = SETUP_PAGE.encode("utf-8")
+            self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
             self.end_headers()
             self.wfile.write(body)
             return
@@ -447,6 +464,418 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(data)
 
+
+
+
+NODE_VERSION = "v22.14.0"
+SETUP_LOCK = threading.Lock()
+SETUP_JOB = {"state": "idle", "steps": [], "log": [], "error": None}
+
+
+def local_node_root():
+    base = os.environ.get("XDG_DATA_HOME") or str(Path.home() / ".local" / "share")
+    return Path(base) / "leonps5" / "node"
+
+
+def find_node():
+    from_env = os.environ.get("LEONPS5_NODE")
+    if from_env and Path(from_env).is_file():
+        return Path(from_env)
+    on_path = shutil.which("node")
+    if on_path:
+        return Path(on_path)
+    root = local_node_root()
+    for candidate in sorted(root.glob("node-*/bin/node")):
+        return candidate
+    if sys.platform.startswith("win"):
+        for candidate in sorted(root.glob("node-*/node.exe")):
+            return candidate
+    return None
+
+
+def find_npm(node_path):
+    if node_path is None:
+        return None
+    sibling = node_path.parent / ("npm.cmd" if sys.platform.startswith("win") else "npm")
+    if sibling.is_file():
+        return sibling
+    return shutil.which("npm") and Path(shutil.which("npm"))
+
+
+def ensure_node(log):
+    node = find_node()
+    if node:
+        log(f"Node.js found: {node}")
+        return node
+    machine = platform.machine().lower()
+    arch = "arm64" if machine in ("arm64", "aarch64") else "x64"
+    system = "darwin" if sys.platform == "darwin" else "win" if sys.platform.startswith("win") else "linux"
+    folder = f"node-{NODE_VERSION}-{system}-{arch}"
+    url = f"https://nodejs.org/dist/{NODE_VERSION}/{folder}.{'zip' if system == 'win' else 'tar.gz'}"
+    root = local_node_root()
+    root.mkdir(parents=True, exist_ok=True)
+    archive = root / (folder + (".zip" if system == "win" else ".tar.gz"))
+    log(f"Downloading Node.js {NODE_VERSION} for {system}-{arch}")
+    try:
+        urllib.request.urlretrieve(url, archive)
+    except OSError as error:
+        raise RuntimeError(f"Node.js download failed ({error}). Install Node from nodejs.org and press Retry.") from error
+    log("Extracting Node.js")
+    if system == "win":
+        with zipfile.ZipFile(archive) as bundle:
+            bundle.extractall(root)
+    else:
+        import tarfile
+        with tarfile.open(archive) as bundle:
+            bundle.extractall(root)
+    node = root / folder / "bin" / "node"
+    if system == "win":
+        node = root / folder / "node.exe"
+    if not node.is_file():
+        raise RuntimeError("Node.js extraction did not produce a usable runtime")
+    log(f"Node.js installed: {node}")
+    return node
+
+
+def run_command(step, command, cwd, log, env_extra=None):
+    environment = dict(os.environ)
+    if env_extra:
+        environment.update(env_extra)
+    process = subprocess.Popen(
+        command,
+        cwd=str(cwd),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        errors="replace",
+        env=environment,
+    )
+    for line in process.stdout:
+        log(line.rstrip())
+    code = process.wait()
+    if code != 0:
+        raise RuntimeError(f"{step} failed with exit code {code}. Check the log above.")
+
+
+def run_setup(web_source, games_dir, node_hint=None):
+    def log(line):
+        with SETUP_LOCK:
+            SETUP_JOB["log"].append(line)
+            if len(SETUP_JOB["log"]) > 600:
+                del SETUP_JOB["log"][:-600]
+
+    def step(index, label):
+        with SETUP_LOCK:
+            SETUP_JOB["steps"][index]["state"] = "running"
+
+    def done_step(index, ok=True):
+        with SETUP_LOCK:
+            SETUP_JOB["steps"][index]["state"] = "done" if ok else "failed"
+
+    try:
+        with SETUP_LOCK:
+            SETUP_JOB["state"] = "running"
+            SETUP_JOB["error"] = None
+            SETUP_JOB["log"] = []
+        node = find_node()
+        if node_hint and node_hint.is_file():
+            node = node_hint
+
+        step(0, "Node.js runtime")
+        try:
+            node = ensure_node(log) if node is None else (log(f"Node.js found: {node}") or node)
+            done_step(0)
+        except Exception as error:
+            done_step(0, ok=False)
+            raise
+
+        node_bin = str(node.parent)
+        env = {"PATH": node_bin + os.pathsep + os.environ.get("PATH", "")}
+
+        step(1, "UI packages")
+        log("npm install")
+        try:
+            run_command("npm install", [str(find_npm(node)), "install", "--no-audit", "--no-fund"], web_source, log, env)
+            done_step(1)
+        except Exception:
+            done_step(1, ok=False)
+            raise
+
+        step(2, "Build the launcher UI")
+        log("npm run build")
+        try:
+            run_command("npm run build", [str(find_npm(node)), "run", "build"], web_source, log, env)
+            done_step(2)
+        except Exception:
+            done_step(2, ok=False)
+            raise
+
+        step(3, "Games folder")
+        try:
+            Path(games_dir).expanduser().mkdir(parents=True, exist_ok=True)
+            log(f"Games folder ready: {games_dir}")
+            done_step(3)
+        except OSError as error:
+            done_step(3, ok=False)
+            raise RuntimeError(f"Cannot create the games folder: {error}")
+
+        dist_dir = web_source / "dist" if (web_source / "dist").is_dir() else web_source
+        if not (dist_dir / "index.html").is_file():
+            raise RuntimeError("The build finished but the UI is still missing")
+        with SETUP_LOCK:
+            SETUP_JOB["state"] = "done"
+        log("Setup complete. Reloading the launcher.")
+    except Exception as error:
+        with SETUP_LOCK:
+            SETUP_JOB["state"] = "error"
+            SETUP_JOB["error"] = str(error)
+        import traceback
+        log(f"Setup error: {error}")
+        for line in traceback.format_exc().splitlines()[-6:]:
+            log(line)
+
+
+def reset_setup_job():
+    with SETUP_LOCK:
+        SETUP_JOB["state"] = "running"
+        SETUP_JOB["steps"] = [
+            {"id": "node", "label": "Node.js runtime", "state": "pending"},
+            {"id": "packages", "label": "UI packages", "state": "pending"},
+            {"id": "build", "label": "Build the launcher UI", "state": "pending"},
+            {"id": "games", "label": "Games folder", "state": "pending"},
+        ]
+        SETUP_JOB["log"] = []
+        SETUP_JOB["error"] = None
+
+
+def setup_status(web_dir, web_source):
+    ui_built = bool(web_dir) and (web_dir / "index.html").is_file()
+    state = SETUP_JOB["state"]
+    if state == "running":
+        phase = "running"
+    elif ui_built:
+        phase = "ready"
+    elif state == "error":
+        phase = "error"
+    else:
+        phase = "idle"
+    return {
+        "phase": phase,
+        "uiBuilt": ui_built,
+        "node": str(find_node()) if find_node() else None,
+        "npm": str(find_npm(find_node())) if find_npm(find_node()) else None,
+        "steps": SETUP_JOB["steps"],
+        "state": state,
+        "log": SETUP_JOB["log"][-40:],
+        "error": SETUP_JOB["error"],
+    }
+
+
+SETUP_PAGE = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LeonPS5 Setup</title>
+<style>
+  :root {
+    --canvas: #0a0a0b;
+    --panel: #14151a;
+    --panel2: #1b1d24;
+    --line: rgba(255, 255, 255, 0.09);
+    --text: #f2f3f5;
+    --muted: #9aa0ad;
+    --accent: #2f6bff;
+    --ok: #35c07a;
+    --bad: #ff6b6e;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    background: var(--canvas);
+    color: var(--text);
+    font-family: system-ui, "Segoe UI", sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .glow {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(46vw 34vw at -6% -12%, rgba(47, 107, 255, 0.13), transparent 70%),
+      radial-gradient(50vw 38vw at 108% 110%, rgba(47, 107, 255, 0.08), transparent 70%);
+  }
+  .card {
+    position: relative;
+    width: 100%;
+    max-width: 560px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 32px;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+  }
+  .brand { display: inline-flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+  .brand .mark {
+    width: 36px; height: 36px; border-radius: 8px;
+    background: rgba(47, 107, 255, 0.16); color: var(--accent);
+    font: 700 13px/36px ui-monospace, monospace; text-align: center;
+  }
+  .brand .name { font: 600 15px/1 system-ui, sans-serif; color: var(--muted); }
+  h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+  p.sub { margin-top: 8px; color: var(--muted); font-size: 14px; line-height: 1.55; }
+  .steps { margin-top: 24px; display: flex; flex-direction: column; gap: 10px; }
+  .step {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel2);
+    opacity: 0.55;
+    transition: opacity 0.2s ease, border-color 0.2s ease;
+  }
+  .step.running, .step.done { opacity: 1; }
+  .step.running { border-color: rgba(47, 107, 255, 0.45); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: rgba(255,255,255,0.18); flex: none; }
+  .step.running .dot { background: var(--accent); animation: pulse 1.1s ease-in-out infinite; }
+  .step.done .dot { background: var(--ok); animation: none; }
+  .step.failed .dot { background: var(--bad); }
+  .step .label { font-size: 14px; flex: 1; }
+  .step .state { font: 500 11px/1 ui-monospace, monospace; color: var(--muted); }
+  .step.running .state { color: var(--accent); }
+  .step.done .state { color: var(--ok); }
+  .step.failed .state { color: var(--bad); }
+  @keyframes pulse { 50% { opacity: 0.35; } }
+  .actions { margin-top: 24px; display: flex; align-items: center; gap: 12px; }
+  button {
+    height: 44px; padding: 0 22px; border: 0; border-radius: 8px;
+    background: var(--accent); color: #fff;
+    font: 600 14px system-ui, sans-serif; cursor: pointer;
+    transition: filter 0.15s ease, transform 0.1s ease;
+  }
+  button:hover { filter: brightness(1.1); }
+  button:active { transform: scale(0.98); }
+  button:disabled { opacity: 0.45; cursor: default; transform: none; }
+  .hint { font-size: 12px; color: var(--muted); }
+  .error {
+    margin-top: 16px; padding: 12px 14px;
+    border: 1px solid rgba(255, 107, 110, 0.35);
+    border-radius: 10px;
+    background: rgba(255, 107, 110, 0.08);
+    color: var(--bad); font-size: 13px; line-height: 1.5; display: none;
+  }
+  .log {
+    margin-top: 16px; max-height: 180px; overflow-y: auto;
+    border: 1px solid var(--line); border-radius: 10px;
+    background: #08090c; padding: 12px 14px;
+    font: 12px/1.6 ui-monospace, monospace; color: var(--muted);
+    white-space: pre-wrap; word-break: break-all; display: none;
+  }
+  .ready { border-color: rgba(53, 192, 122, 0.4); }
+</style>
+</head>
+<body>
+<div class="glow"></div>
+<div class="card" id="card">
+  <div class="brand"><span class="mark">L5</span><span class="name">LeonPS5 launcher</span></div>
+  <h1 id="title">Set up the launcher</h1>
+  <p class="sub" id="sub">This runs right here in the browser: it prepares Node.js if needed, builds the home screen and creates your games folder. Nothing to configure.</p>
+  <div class="steps" id="steps"></div>
+  <div class="error" id="error"></div>
+  <div class="log" id="log"></div>
+  <div class="actions">
+    <button id="action" disabled>Checking environment</button>
+    <span class="hint" id="hint">Python and this machine do the work. You watch.</span>
+  </div>
+</div>
+<script>
+(function () {
+  var stepsEl = document.getElementById("steps");
+  var action = document.getElementById("action");
+  var errorEl = document.getElementById("error");
+  var logEl = document.getElementById("log");
+  var sub = document.getElementById("sub");
+  var card = document.getElementById("card");
+  var started = false;
+
+  function render(status) {
+    stepsEl.innerHTML = "";
+    (status.steps || []).forEach(function (step) {
+      var row = document.createElement("div");
+      row.className = "step " + step.state;
+      var dot = document.createElement("span");
+      dot.className = "dot";
+      var label = document.createElement("span");
+      label.className = "label";
+      label.textContent = step.label;
+      var state = document.createElement("span");
+      state.className = "state";
+      state.textContent = step.state === "running" ? "working" : step.state;
+      row.appendChild(dot);
+      row.appendChild(label);
+      row.appendChild(state);
+      stepsEl.appendChild(row);
+    });
+    if (status.log && status.log.length) {
+      logEl.style.display = "block";
+      logEl.textContent = status.log.join(String.fromCharCode(10));
+      logEl.scrollTop = logEl.scrollHeight;
+    }
+    if (status.error) {
+      errorEl.style.display = "block";
+      errorEl.textContent = status.error;
+    } else {
+      errorEl.style.display = "none";
+    }
+    action.dataset.ready = status.phase === "ready" ? "1" : "0";
+    if (status.phase === "running") {
+      action.textContent = "Installing";
+      action.disabled = true;
+    } else if (status.phase === "ready") {
+      action.textContent = "Enter the launcher";
+      action.disabled = false;
+      card.classList.add("ready");
+      sub.textContent = "Everything is installed. The home screen is ready.";
+    } else if (status.phase === "error") {
+      action.textContent = "Retry setup";
+      action.disabled = false;
+      card.classList.remove("ready");
+    } else {
+      action.textContent = "Install and launch";
+      action.disabled = false;
+      card.classList.remove("ready");
+      sub.textContent = "This runs right here in the browser: it prepares Node.js if needed, builds the home screen and creates your games folder. Nothing to configure.";
+    }
+  }
+
+  function poll() {
+    fetch("/api/setup/status").then(function (r) { return r.json(); }).then(function (status) {
+      if (!started && status.uiBuilt) {
+        document.getElementById("title").textContent = "Launcher is ready";
+        sub.textContent = "The home screen is already built. Press the button to open it.";
+      }
+      render(status);
+    }).catch(function () {});
+  }
+
+  action.addEventListener("click", function () {
+    if (action.dataset.ready === "1") { window.location.reload(); return; }
+    started = true;
+    action.disabled = true;
+    action.textContent = "Installing";
+    logEl.style.display = "block";
+    fetch("/api/setup/install", { method: "POST" }).then(function () { poll(); });
+  });
+
+  setInterval(poll, 900);
+  poll();
+})();
+</script>
+</body>
+</html>"""
 
 def main():
     parser = argparse.ArgumentParser(description="LeonPS5 home launcher server")
@@ -471,6 +900,8 @@ def main():
     Handler.library = Library(games_dir, runner)
     Handler.library.set_extra_args(stored["extraArgs"])
     Handler.web_dir = Path(args.web_dir).expanduser().resolve()
+    web_dir_arg = Handler.web_dir
+    Handler.web_source = web_dir_arg.parent if web_dir_arg.name == "dist" else web_dir_arg
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     Handler.server_ref = server
 

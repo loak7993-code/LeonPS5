@@ -5,6 +5,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import time
 import urllib.request
 import zlib
 from pathlib import Path
@@ -48,6 +49,8 @@ class ServerFixture:
         self.games_dir = games_dir
         self.runner = runner
         self.library = server.Library(games_dir, runner)
+        server.Handler.web_source = Path(__file__).resolve().parent / "web"
+        server.Handler.web_dir = server.Handler.web_source / "dist"
         self.httpd = server.ThreadingHTTPServer(("127.0.0.1", 0), server.Handler)
         server.Handler.library = self.library
         self.port = self.httpd.server_address[1]
@@ -188,6 +191,42 @@ class ServerTests(unittest.TestCase):
         status, body = fixture.post("/api/nope")
         self.assertEqual(status, 404)
         self.assertIn("Unknown endpoint", body["error"])
+
+    def test_setup_status_shape(self):
+        fixture = self.spawn()
+        status, body = fixture.get("/api/setup/status")
+        self.assertEqual(status, 200)
+        self.assertIn("phase", body)
+        self.assertIn("uiBuilt", body)
+        self.assertIn("steps", body)
+        self.assertIn(body["phase"], ("idle", "running", "ready", "error"))
+
+    def test_setup_install_runs_job(self):
+        fixture = self.spawn()
+        calls = []
+        original = server.run_setup
+
+        def fake_setup(web_source, games_dir, node_hint=None):
+            calls.append(web_source)
+            with server.SETUP_LOCK:
+                server.SETUP_JOB["state"] = "done"
+                server.SETUP_JOB["steps"] = [
+                    {"id": "node", "label": "Node.js runtime", "state": "done"}
+                ]
+
+        server.run_setup = fake_setup
+        self.addCleanup(setattr, server, "run_setup", original)
+        status, body = fixture.post("/api/setup/install")
+        self.assertEqual(status, 200)
+        for _ in range(50):
+            _, progress = fixture.get("/api/setup/status")
+            if progress["state"] == "done":
+                break
+            time.sleep(0.1)
+        self.assertEqual(progress["state"], "done")
+        self.assertEqual(progress["steps"][0]["state"], "done")
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0], Path(__file__).resolve().parent / "web")
 
     def test_title_fallbacks_to_folder_name(self):
         folder = make_game(self.games, "delta", "Delta Prime")

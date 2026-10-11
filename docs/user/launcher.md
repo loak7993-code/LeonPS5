@@ -6,6 +6,18 @@ title as a card in a console-style rail and hands the selected folder to the
 
 ## Quick start
 
+The easiest way needs only Python. Start the server and open the browser:
+
+```sh
+python3 tools/launcher/server.py
+```
+
+If the home screen is not built yet, the browser opens a setup page instead:
+press Install and launch and it prepares Node.js (downloading it for your user
+if the machine has none), installs the UI packages, builds the home screen and
+creates your games folder, with live progress. When it finishes, press Enter
+the launcher. The command line alternative below does the same thing.
+
 One command on Linux or macOS:
 
 ```sh
@@ -22,6 +34,10 @@ The installer checks Python and Node, builds the UI, creates the games folder,
 reports whether the runner is built and opens the launcher in the browser. No
 configuration is needed: the games folder defaults to `~/Games/LeonPS5` and the
 first-run setup in the UI changes it if your games live somewhere else.
+
+The GUI setup page runs the same steps: `GET /api/setup/status` reports the
+environment and `POST /api/setup/install` starts the job; the Node.js runtime
+is downloaded to `~/.local/share/leonps5/node` when the machine has none.
 
 On the first start the launcher walks through three steps (welcome, games
 folder, ready) and offers demo titles so the screen is useful before you have

@@ -13,10 +13,10 @@ function Ribbons() {
       >
         <defs>
           <linearGradient id="ribbon-main" x1="0" y1="0" x2="1440" y2="0" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stopColor="#2f6bff" stopOpacity="0" />
-            <stop offset="0.22" stopColor="#2f6bff" />
-            <stop offset="0.72" stopColor="#3fa9c9" />
-            <stop offset="1" stopColor="#3fa9c9" stopOpacity="0" />
+            <stop offset="0" stopColor="var(--color-accent)" stopOpacity="0" />
+            <stop offset="0.22" stopColor="var(--color-accent)" />
+            <stop offset="0.72" stopColor="color-mix(in oklab, var(--color-accent) 60%, white)" />
+            <stop offset="1" stopColor="color-mix(in oklab, var(--color-accent) 60%, white)" stopOpacity="0" />
           </linearGradient>
         </defs>
         <path
@@ -54,7 +54,7 @@ function GlowHaze() {
       className="pointer-events-none absolute inset-0"
       style={{
         background:
-          "radial-gradient(48vw 36vw at -6% -10%, rgba(47,107,255,0.13), transparent 70%), radial-gradient(52vw 40vw at 106% 108%, rgba(63,169,201,0.09), transparent 70%)",
+          "radial-gradient(48vw 36vw at -6% -10%, color-mix(in oklab, var(--color-accent) 13%, transparent), transparent 70%), radial-gradient(52vw 40vw at 106% 108%, color-mix(in oklab, var(--color-accent) 8%, transparent), transparent 70%)",
       }}
     />
   );

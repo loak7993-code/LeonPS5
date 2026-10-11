@@ -292,7 +292,7 @@ class Library:
         with self.lock:
             self.played[game_id] = stamp
         self.save_state()
-        parts = [Path(self.runner).name, *extra, game["folder"]]
+        parts = [Path(self.runner).name, *self.extra_args, game["folder"]]
         return {"status": "started", "command": " ".join(parts)}
 
 
@@ -355,6 +355,8 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json(self.library.launch(game_id))
             except LaunchError as error:
                 self.send_json({"error": str(error)}, 409)
+            except Exception as error:
+                self.send_json({"error": f"Launcher error: {error}"}, 500)
             return
         if path == "/api/config":
             body = self.read_json()

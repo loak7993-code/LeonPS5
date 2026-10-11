@@ -203,10 +203,14 @@ function Launcher() {
 
         })
         .catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
           setLaunch({
             game,
             phase: "error",
-            error: error instanceof Error ? error.message : String(error),
+            error:
+              message === "Failed to fetch" || message === "NetworkError when attempting to fetch resource."
+                ? "Could not reach the launcher server. Start it with python3 tools/launcher/server.py and retry."
+                : message,
             command: null,
           });
         });

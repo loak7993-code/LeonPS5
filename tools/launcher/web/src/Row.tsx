@@ -73,15 +73,14 @@ export function Rail({ games, index, searching, onSelect, onActivate }: RailProp
   return (
     <section aria-label="Game rail" className="relative min-h-0 flex-1">
       <div className="relative z-10 h-full">
-        <AnimatePresence mode="popLayout">
+        <AnimatePresence mode="wait">
           {selected && !searching && (
             <motion.div
               key={selected.id}
               className="absolute left-0 top-1 w-[calc(100%-2rem)]"
               initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0, x: titleX }}
-              exit={{ opacity: 0, y: 8 }}
-              transition={{ type: "spring", stiffness: 230, damping: 28 }}
+              animate={{ opacity: 1, y: 0, x: titleX, transition: { duration: 0.16, ease: "easeOut" } }}
+              exit={{ opacity: 0, y: 6, transition: { duration: 0.12, ease: "easeIn" } }}
             >
               <h1 className="truncate text-[30px] font-semibold tracking-tight max-md:text-[22px]">
                 {selected.title}

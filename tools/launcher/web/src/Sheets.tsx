@@ -116,7 +116,7 @@ export function SettingsSheet({
             <span className="shrink-0 text-sm text-muted">Games directory</span>
             <span className="min-w-0 text-right text-sm">{library.gamesDir}</span>
           </div>
-          <div className="mt-3 flex items-start gap-2">
+          <div className="mt-3 flex items-end gap-2">
             <div className="min-w-0 flex-1">
               <TextField
                 label="Change games directory"
@@ -126,7 +126,12 @@ export function SettingsSheet({
                 error={dirError}
               />
             </div>
-            <Button loading={saving} disabled={!dir.trim() || dir === library.gamesDir} onClick={changeDir} className="mt-[26px]">
+            <Button
+              loading={saving}
+              disabled={!dir.trim() || dir === library.gamesDir}
+              onClick={changeDir}
+              className="mb-[1px] h-11 shrink-0"
+            >
               {saving ? "Saving" : "Change"}
             </Button>
           </div>
@@ -216,7 +221,12 @@ export function GridSheet({ games, index, onIndex, onActivate, onClose }: GridSh
   }, [index, columns, games, onIndex, onActivate, onClose]);
 
   return (
-    <Dialog open onClose={onClose} wide title={`Library · ${games.length} titles`}>
+    <Dialog
+      open
+      onClose={onClose}
+      wide
+      title={`Library · ${games.length} ${games.length === 1 ? "title" : "titles"}`}
+    >
       <div className="max-h-[62vh] overflow-y-auto p-6">
         <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(158px, 1fr))" }}>
           {games.map((game, position) => (

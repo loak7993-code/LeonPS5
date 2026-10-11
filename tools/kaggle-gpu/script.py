@@ -10,6 +10,16 @@ STEPS = [
     # Toolchain check. The Kaggle GPU image ships git, cmake, ninja and g++
     # already; the guest build needs nothing beyond them.
     "which git cmake ninja g++",
+    # Vulkan loader. The Kaggle GPU image ships the NVIDIA driver but not the
+    # Vulkan loader or ICD, so vkCreateInstance fails with INCOMPATIBLE_DRIVER.
+    # The loader deb rides in the dataset; the ICD json is written from a glob
+    # over the driver's Vulkan library.
+    "dpkg -i /kaggle/input/leonps5-source/debs/*.deb || true",
+    "mkdir -p /usr/share/vulkan/icd.d",
+    "NVICD=$(ls /usr/lib/x86_64-linux-gnu/libnvidia*vulkan* 2>/dev/null | head -1)",
+    "printf '{\"ICD\":{\"library_path\":\"%s\",\"api_version\":\"1.3.204\"}}\n' \"$NVICD\" > /usr/share/vulkan/icd.d/nvidia_icd.json",
+    "cat /usr/share/vulkan/icd.d/nvidia_icd.json",
+    "ls /usr/lib/x86_64-linux-gnu/ | grep -iE 'nvidia|vulkan' | head -12",
     # The source tree comes from the attached dataset (the kernel has no
     # internet, so nothing is cloned).
     "cp -a /kaggle/input/leonps5-source/leonps5-src /kaggle/LeonPS5",

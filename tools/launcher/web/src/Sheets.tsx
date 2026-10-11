@@ -1,59 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { motion } from "motion/react";
-import { X, Copy, Check, FolderOpen, ArrowSquareOut } from "@phosphor-icons/react";
+import { Check, Copy, FolderOpen } from "@phosphor-icons/react";
 import { GameArt } from "./Art";
 import { iconUrl, type Game, type Library } from "./api";
 import type { Accent, Prefs } from "./prefs";
+import { Button } from "./ui/Button";
+import { Dialog } from "./ui/Dialog";
+import { IconButton } from "./ui/IconButton";
+import { Segmented } from "./ui/Segmented";
+import { Switch } from "./ui/Switch";
+import { TextField } from "./ui/TextField";
 
-type SheetProps = {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-  wide?: boolean;
+const ACCENTS: Accent[] = ["blue", "cyan", "emerald", "orange", "red"];
+const ACCENT_HEX: Record<Accent, string> = {
+  blue: "#2f6bff",
+  cyan: "#2bb8d6",
+  emerald: "#2fb87a",
+  orange: "#e08a3c",
+  red: "#e0524f",
 };
-
-export function Sheet({ title, onClose, children, wide }: SheetProps) {
-  useEffect(() => {
-    const handler = (event: KeyboardEvent): void => {
-      if (event.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-40 flex items-center justify-center p-6 max-md:p-4">
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onClose}
-        className="absolute inset-0 bg-canvas/70 backdrop-blur-sm"
-      />
-      <motion.div
-        role="dialog"
-        aria-label={title}
-        initial={{ opacity: 0, y: 24, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 16, scale: 0.98 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className={`relative w-full ${wide ? "max-w-4xl" : "max-w-[560px]"} overflow-hidden rounded-2xl border border-line bg-panel shadow-[0_30px_80px_rgba(0,0,0,0.5)]`}
-      >
-        <div className="flex items-center justify-between border-b border-line px-6 py-4">
-          <h2 className="text-base font-semibold">{title}</h2>
-          <button
-            type="button"
-            aria-label="Close"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-full text-muted transition-colors hover:bg-white/10 hover:text-text"
-          >
-            <X size={18} weight="bold" />
-          </button>
-        </div>
-        {children}
-      </motion.div>
-    </div>
-  );
-}
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -69,68 +33,12 @@ type SettingsSheetProps = {
   onClose: () => void;
   onRescan: () => void;
   onOpenFolder: () => void;
-  onToast: (message: string) => void;
+  onToast: (message: string, kind?: "info" | "error") => void;
   onSaveDir: (dir: string) => Promise<void>;
   prefs: Prefs;
   onPref: <K extends keyof Prefs>(key: K, value: Prefs[K]) => void;
+  onGallery: () => void;
 };
-
-const ACCENTS: Accent[] = ["blue", "cyan", "emerald", "orange", "red"];
-const ACCENT_HEX: Record<Accent, string> = {
-  blue: "#2f6bff",
-  cyan: "#2bb8d6",
-  emerald: "#2fb87a",
-  orange: "#e08a3c",
-  red: "#e0524f",
-};
-
-function Segmented<T extends string>({
-  value,
-  options,
-  onChange,
-  label,
-}: {
-  value: T;
-  options: { value: T; label: string }[];
-  onChange: (value: T) => void;
-  label: string;
-}) {
-  return (
-    <div role="group" aria-label={label} className="inline-flex rounded-lg border border-line p-0.5">
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          onClick={() => onChange(option.value)}
-          className={`h-8 rounded-md px-3 text-xs transition-colors ${
-            option.value === value ? "bg-accent text-white" : "text-muted hover:text-text"
-          }`}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function Toggle({ on, onChange, label }: { on: boolean; onChange: (on: boolean) => void; label: string }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      aria-label={label}
-      onClick={() => onChange(!on)}
-      className={`relative h-6 w-11 rounded-full transition-colors ${on ? "bg-accent" : "bg-white/15"}`}
-    >
-      <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-          on ? "translate-x-5" : "translate-x-0.5"
-        }`}
-      />
-    </button>
-  );
-}
 
 export function SettingsSheet({
   library,
@@ -141,13 +49,24 @@ export function SettingsSheet({
   onSaveDir,
   prefs,
   onPref,
+  onGallery,
 }: SettingsSheetProps) {
   const [copied, setCopied] = useState(false);
   const [dir, setDir] = useState(library.gamesDir);
   const [saving, setSaving] = useState(false);
   const [dirError, setDirError] = useState<string | null>(null);
+
+  const changeDir = (): void => {
+    setSaving(true);
+    setDirError(null);
+    onSaveDir(dir)
+      .then(() => onToast("Games directory saved"))
+      .catch((reason: unknown) => setDirError(reason instanceof Error ? reason.message : String(reason)))
+      .finally(() => setSaving(false));
+  };
+
   return (
-    <Sheet title="Settings" onClose={onClose}>
+    <Dialog open onClose={onClose} title="Settings">
       <div>
         <Row label="Accent">
           <div className="flex items-center justify-end gap-2">
@@ -190,44 +109,27 @@ export function SettingsSheet({
           />
         </Row>
         <Row label="Backdrop art">
-          <Toggle
-            label="Backdrop art"
-            on={prefs.backdrop}
-            onChange={(on) => onPref("backdrop", on)}
-          />
+          <Switch label="Backdrop art" checked={prefs.backdrop} onChange={(on) => onPref("backdrop", on)} />
         </Row>
         <div className="border-b border-line px-6 py-3.5">
           <div className="flex items-center justify-between gap-4">
             <span className="shrink-0 text-sm text-muted">Games directory</span>
             <span className="min-w-0 text-right text-sm">{library.gamesDir}</span>
           </div>
-          <div className="mt-3 flex items-center gap-2">
-            <input
-              type="text"
-              value={dir}
-              aria-label="Change games directory"
-              onChange={(event) => setDir(event.target.value)}
-              className="h-10 min-w-0 flex-1 rounded-lg border border-line bg-canvas/60 px-3 font-mono text-xs outline-none focus:border-accent"
-            />
-            <button
-              type="button"
-              disabled={saving || !dir.trim() || dir === library.gamesDir}
-              onClick={() => {
-                setSaving(true);
-                setDirError(null);
-                onSaveDir(dir)
-                  .then(() => onToast("Games directory saved"))
-                  .catch((reason: unknown) =>
-                    setDirError(reason instanceof Error ? reason.message : String(reason)),
-                  )
-                  .finally(() => setSaving(false));
-              }}
-              className="h-10 shrink-0 rounded-lg bg-accent px-4 text-sm font-medium text-white transition-transform enabled:active:scale-[0.98] disabled:opacity-40"
-            >
+          <div className="mt-3 flex items-start gap-2">
+            <div className="min-w-0 flex-1">
+              <TextField
+                label="Change games directory"
+                hideLabel
+                value={dir}
+                onChange={(event) => setDir(event.target.value)}
+                error={dirError}
+              />
+            </div>
+            <Button loading={saving} disabled={!dir.trim() || dir === library.gamesDir} onClick={changeDir} className="mt-[26px]">
               {saving ? "Saving" : "Change"}
-            </button>
+            </Button>
           </div>
-          {dirError && <p className="mt-2 text-left text-xs text-danger">{dirError}</p>}
         </div>
         <Row label="Copy path">
           <button
@@ -240,7 +142,7 @@ export function SettingsSheet({
                   onToast("Path copied");
                   window.setTimeout(() => setCopied(false), 1500);
                 })
-                .catch(() => onToast("Copy failed"));
+                .catch(() => onToast("Copy failed", "error"));
             }}
             className="inline-flex max-w-full items-center gap-2 rounded-lg bg-white/5 px-2 py-1 font-mono text-xs text-text transition-colors hover:bg-white/10"
           >
@@ -264,25 +166,18 @@ export function SettingsSheet({
           <span className="font-mono text-xs text-text">{library.version}</span>
         </Row>
       </div>
-      <div className="flex items-center justify-end gap-3 px-6 py-4">
-        <button
-          type="button"
-          onClick={onOpenFolder}
-          className="inline-flex h-10 items-center gap-2 rounded-lg border border-line px-4 text-sm text-text transition-colors hover:bg-white/5"
-        >
-          <FolderOpen size={16} weight="bold" />
-          Open folder
-        </button>
-        <button
-          type="button"
-          onClick={onRescan}
-          className="inline-flex h-10 items-center gap-2 rounded-lg bg-accent px-4 text-sm font-medium text-white transition-transform hover:brightness-110 active:scale-[0.98]"
-        >
-          <ArrowSquareOut size={16} weight="bold" />
-          Rescan library
-        </button>
+      <div className="flex items-center justify-between gap-3 px-6 py-4">
+        <Button variant="ghost" onClick={onGallery}>
+          Component gallery
+        </Button>
+        <div className="flex items-center gap-3">
+          <Button variant="secondary" icon={<FolderOpen size={16} weight="bold" />} onClick={onOpenFolder}>
+            Open folder
+          </Button>
+          <Button data-autofocus onClick={onRescan}>Rescan library</Button>
+        </div>
       </div>
-    </Sheet>
+    </Dialog>
   );
 }
 
@@ -296,7 +191,10 @@ type GridSheetProps = {
 
 export function GridSheet({ games, index, onIndex, onActivate, onClose }: GridSheetProps) {
   const selectedRef = useRef<HTMLButtonElement>(null);
-  const columns = useMemo(() => Math.max(1, Math.floor((typeof window === "undefined" ? 1280 : window.innerWidth - 96) / 174)), []);
+  const columns = useMemo(
+    () => Math.max(1, Math.floor((typeof window === "undefined" ? 1280 : window.innerWidth - 96) / 174)),
+    [],
+  );
 
   useEffect(() => {
     selectedRef.current?.scrollIntoView({ block: "nearest" });
@@ -318,7 +216,7 @@ export function GridSheet({ games, index, onIndex, onActivate, onClose }: GridSh
   }, [index, columns, games, onIndex, onActivate, onClose]);
 
   return (
-    <Sheet title={`Library · ${games.length} titles`} onClose={onClose} wide>
+    <Dialog open onClose={onClose} wide title={`Library · ${games.length} titles`}>
       <div className="max-h-[62vh] overflow-y-auto p-6">
         <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(158px, 1fr))" }}>
           {games.map((game, position) => (
@@ -333,7 +231,9 @@ export function GridSheet({ games, index, onIndex, onActivate, onClose }: GridSh
             >
               <span
                 className={`relative block aspect-square w-full overflow-hidden rounded-xl bg-panel2 ${
-                  position === index ? "shadow-[0_0_0_2px_rgba(255,255,255,0.88)]" : "shadow-[0_0_0_1px_rgba(151,163,224,0.12)]"
+                  position === index
+                    ? "shadow-[0_0_0_2px_rgba(255,255,255,0.88)]"
+                    : "shadow-[0_0_0_1px_rgba(151,163,224,0.12)]"
                 }`}
               >
                 {game.hasIcon ? (
@@ -342,22 +242,20 @@ export function GridSheet({ games, index, onIndex, onActivate, onClose }: GridSh
                   <GameArt id={game.id} title={game.title} className="absolute inset-0 h-full w-full" />
                 )}
               </span>
-              <span className={`truncate text-xs ${position === index ? "text-text" : "text-muted"}`}>
-                {game.title}
-              </span>
+              <span className={`truncate text-xs ${position === index ? "text-text" : "text-muted"}`}>{game.title}</span>
             </button>
           ))}
         </div>
       </div>
-    </Sheet>
+    </Dialog>
   );
 }
 
-type AboutSheetProps = { onClose: () => void };
+type AboutSheetProps = { onClose: () => void; onGallery: () => void };
 
-export function AboutSheet({ onClose }: AboutSheetProps) {
+export function AboutSheet({ onClose, onGallery }: AboutSheetProps) {
   return (
-    <Sheet title="About" onClose={onClose}>
+    <Dialog open onClose={onClose} title="About">
       <div className="space-y-4 px-6 py-5 text-sm leading-relaxed text-muted">
         <p>
           LeonPS5 launcher is the home screen of the LeonPS5 project. It scans a games directory,
@@ -374,15 +272,20 @@ export function AboutSheet({ onClose }: AboutSheetProps) {
           <span>D-pad or left stick, cross to start, circle to go back</span>
         </div>
         <p className="font-mono text-xs">
-          <a
-            href="https://github.com/loak7993-code/LeonPS5"
-            className="text-accent underline-offset-4 hover:underline"
-          >
+          <a href="https://github.com/loak7993-code/LeonPS5" className="text-accent underline-offset-4 hover:underline">
             github.com/loak7993-code/LeonPS5
           </a>
         </p>
       </div>
-    </Sheet>
+      <div className="flex justify-between border-t border-line px-6 py-4">
+        <Button variant="ghost" onClick={onGallery}>
+          Component gallery
+        </Button>
+        <IconButton label="Close" onClick={onClose} className="self-center">
+          <Check size={18} weight="bold" />
+        </IconButton>
+      </div>
+    </Dialog>
   );
 }
 
@@ -390,31 +293,21 @@ type PowerSheetProps = { onClose: () => void; onQuit: () => void };
 
 export function PowerSheet({ onClose, onQuit }: PowerSheetProps) {
   return (
-    <Sheet title="Power" onClose={onClose}>
+    <Dialog open onClose={onClose} title="Power">
       <div className="px-6 py-5">
         <p className="text-sm text-muted">
           Quitting stops the launcher server on this machine. Any title the runner is still
           processing keeps running in the background.
         </p>
         <div className="mt-5 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-10 rounded-lg border border-line px-4 text-sm text-text transition-colors hover:bg-white/5"
-          >
+          <Button variant="secondary" onClick={onClose}>
             Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onQuit}
-            className="h-10 rounded-lg bg-danger px-4 text-sm font-medium text-canvas transition-transform active:scale-[0.98]"
-          >
+          </Button>
+          <Button variant="danger" onClick={onQuit}>
             Quit launcher
-          </button>
+          </Button>
         </div>
       </div>
-    </Sheet>
+    </Dialog>
   );
 }
-
-

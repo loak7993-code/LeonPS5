@@ -1,5 +1,7 @@
 import { motion } from "motion/react";
-import { CircleNotch, XCircle } from "@phosphor-icons/react";
+import { XCircle } from "@phosphor-icons/react";
+import { Button } from "./ui/Button";
+import { Progress } from "./ui/Progress";
 import type { Game } from "./api";
 
 export type LaunchPhase = "starting" | "running" | "error";
@@ -37,52 +39,41 @@ export function LaunchOverlay({ game, phase, error, command, onRetry, onClose }:
             <h2 className="mt-4 text-lg font-semibold">Could not start {game.title}</h2>
             <p className="mt-2 rounded-lg bg-white/5 p-3 text-left font-mono text-xs text-muted">{error}</p>
             <div className="mt-6 flex justify-center gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="h-10 rounded-lg border border-line px-4 text-sm text-text transition-colors hover:bg-white/5"
-              >
+              <Button variant="secondary" onClick={onClose}>
                 Back
-              </button>
-              <button
-                type="button"
-                onClick={onRetry}
-                className="h-10 rounded-lg bg-accent px-4 text-sm font-medium text-white transition-transform active:scale-[0.98]"
-              >
-                Retry
-              </button>
+              </Button>
+              <Button onClick={onRetry}>Retry</Button>
             </div>
           </>
         ) : (
           <>
-            {phase === "starting" ? (
-              <CircleNotch size={40} weight="bold" className="mx-auto animate-spin text-accent" />
-            ) : (
-              <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-accent/20 font-mono text-sm font-bold text-accent">
-                OK
-              </span>
-            )}
+            <div className="mx-auto w-10">
+              {phase === "starting" ? (
+                <span className="flex h-10 items-center justify-center">
+                  <span className="block h-2 w-2 rounded-full bg-accent" />
+                </span>
+              ) : (
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/20 font-mono text-sm font-bold text-accent">
+                  OK
+                </span>
+              )}
+            </div>
             <h2 className="mt-4 text-lg font-semibold">
               {phase === "starting" ? `Starting ${game.title}` : "Running in the background"}
             </h2>
             <p className="mt-2 text-sm text-muted">
               {phase === "starting"
                 ? "Handing the title to the leonps5 runner."
-                : command
-                  ? "The runner keeps working. Esc returns to the home screen."
-                  : "Esc returns to the home screen."}
+                : "The runner keeps working. Esc returns to the home screen."}
             </p>
+            {phase === "starting" && <Progress label={`Starting ${game.title}`} className="mt-5" />}
             {command && phase === "running" && (
               <p className="mt-3 truncate rounded-lg bg-white/5 px-3 py-2 font-mono text-xs text-muted">{command}</p>
             )}
             {phase === "running" && (
-              <button
-                type="button"
-                onClick={onClose}
-                className="mt-6 h-10 rounded-lg border border-line px-4 text-sm text-text transition-colors hover:bg-white/5"
-              >
+              <Button variant="secondary" className="mt-6" onClick={onClose}>
                 Back to home
-              </button>
+              </Button>
             )}
           </>
         )}
@@ -96,13 +87,7 @@ export function StoppedScreen({ onReload }: { onReload: () => void }) {
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-canvas">
       <h2 className="text-lg font-semibold">Launcher stopped</h2>
       <p className="text-sm text-muted">The local server has exited. Close this tab or reload.</p>
-      <button
-        type="button"
-        onClick={onReload}
-        className="h-10 rounded-lg bg-accent px-4 text-sm font-medium text-white transition-transform active:scale-[0.98]"
-      >
-        Reload
-      </button>
+      <Button onClick={onReload}>Reload</Button>
     </div>
   );
 }

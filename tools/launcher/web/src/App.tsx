@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
 import { ArrowClockwise } from "@phosphor-icons/react";
+import { Button } from "./ui/Button";
+import { Skeleton, SkeletonRegion } from "./ui/Skeleton";
+import { ToastProvider, useToast } from "./ui/Toaster";
+import { Gallery } from "./Gallery";
 import * as api from "./api";
 import type { Game, Library } from "./api";
 import { sortGames, type SortMode } from "./data";
@@ -33,35 +36,30 @@ type NavHandlers = {
   back(): void;
 };
 
-function Skeleton() {
+function LoadingRail() {
   return (
-    <div className="relative z-10 flex min-h-0 flex-1 items-center">
+    <SkeletonRegion className="relative z-10 flex min-h-0 flex-1 items-center">
       <div className="flex gap-[18px] pl-[72px] max-md:pl-6">
         {[0, 1, 2, 3, 4, 5].map((slot) => (
-          <div
+          <Skeleton
             key={slot}
-            className="shimmer aspect-square w-[var(--card-w)] shrink-0 rounded-[14px] bg-panel"
+            className="aspect-square w-[var(--card-w)] shrink-0 rounded-[14px]"
           />
         ))}
       </div>
-    </div>
+    </SkeletonRegion>
   );
 }
 
 function ServerError({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
     <div className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center gap-4 px-6 text-center">
-      <h1 className="text-2xl font-semibold">Cannot reach the launcher server</h1>
+      <h2 className="text-2xl font-semibold">Cannot reach the launcher server</h2>
       <p className="max-w-md rounded-lg bg-white/5 p-3 font-mono text-xs text-muted">{error}</p>
       <p className="text-xs text-muted/80">Start it with: python3 tools/launcher/server.py</p>
-      <button
-        type="button"
-        onClick={onRetry}
-        className="inline-flex h-11 items-center gap-2 rounded-lg bg-accent px-5 text-sm font-medium text-white transition-transform active:scale-[0.98]"
-      >
-        <ArrowClockwise size={16} weight="bold" />
+      <Button icon={<ArrowClockwise size={16} weight="bold" />} onClick={onRetry}>
         Retry
-      </button>
+      </Button>
     </div>
   );
 }
@@ -76,6 +74,14 @@ const emptyNav: NavHandlers = {
 };
 
 export default function App() {
+  return (
+    <ToastProvider>
+      <Launcher />
+    </ToastProvider>
+  );
+}
+
+function Launcher() {
   const [demo, setDemo] = useState(false);
   const [library, setLibrary] = useState<Library | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -89,8 +95,8 @@ export default function App() {
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [launch, setLaunch] = useState<LaunchState | null>(null);
   const [gridIndex, setGridIndex] = useState(0);
-  const [toast, setToast] = useState<string | null>(null);
   const [stopped, setStopped] = useState(false);
+  const { toast } = useToast();
   const [onboarding, setOnboarding] = useState(
     () => window.localStorage.getItem("leonps5-onboarded") !== "done",
   );
@@ -98,16 +104,11 @@ export default function App() {
 
   const searchRef = useRef<HTMLInputElement>(null);
   const launchTimer = useRef(0);
-  const toastTimer = useRef(0);
   const wantedRef = useRef<string | null>(null);
   const navRef = useRef<NavHandlers>(emptyNav);
   const launchRef = useRef<LaunchState | null>(null);
 
-  const showToast = useCallback((message: string) => {
-    setToast(message);
-    window.clearTimeout(toastTimer.current);
-    toastTimer.current = window.setTimeout(() => setToast(null), 2600);
-  }, []);
+  const showToast = toast;
 
   const fetchLibrary = useCallback((useDemo: boolean) => {
     api
@@ -199,6 +200,7 @@ export default function App() {
             }
             showToast(`Started ${game.title}`);
           }, 3200);
+
         })
         .catch((error: unknown) => {
           setLaunch({
@@ -314,6 +316,10 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [overlay, searching]);
 
+  if (window.location.pathname === "/gallery") {
+    return <Gallery />;
+  }
+
   if (stopped) {
     return <StoppedScreen onReload={() => window.location.reload()} />;
   }
@@ -338,7 +344,7 @@ export default function App() {
         onPower={() => setOverlay("power")}
       />
       {library === null && loadError === null ? (
-        <Skeleton />
+        <LoadingRail />
       ) : loadError !== null ? (
         <ServerError error={loadError} onRetry={() => fetchLibrary(demo)} />
       ) : gamesEmpty ? (
@@ -384,22 +390,7 @@ export default function App() {
           onClose={closeOnboarding}
         />
       )}
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            role="status"
-            className="fixed bottom-32 left-1/2 z-50 -translate-x-1/2 rounded-full border border-line bg-panel px-4 py-2 text-sm shadow-lg"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            {toast}
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {overlay === "settings" && library && (
+      {overlay === "settings" && library && (
           <SettingsSheet
             key="settings"
             library={library}
@@ -407,12 +398,19 @@ export default function App() {
             onRescan={rescan}
             onOpenFolder={openFolder}
             onToast={showToast}
+            onGallery={() => window.location.assign("/gallery")}
             onSaveDir={saveDir}
             prefs={prefs}
             onPref={setPref}
           />
         )}
-        {overlay === "about" && <AboutSheet key="about" onClose={() => setOverlay(null)} />}
+        {overlay === "about" && (
+          <AboutSheet
+            key="about"
+            onClose={() => setOverlay(null)}
+            onGallery={() => window.location.assign("/gallery")}
+          />
+        )}
         {overlay === "power" && (
           <PowerSheet
             key="power"
@@ -451,8 +449,7 @@ export default function App() {
               setLaunch(null);
             }}
           />
-        )}
-      </AnimatePresence>
+      )}
     </div>
   );
 }

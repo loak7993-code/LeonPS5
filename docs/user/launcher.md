@@ -50,6 +50,14 @@ cd tools/launcher/web && npm run dev
 The dev server runs on http://localhost:5188 and proxies `/api` to the launcher
 server on port 8245.
 
+## Component gallery
+
+The launcher UI kit is documented live: open http://127.0.0.1:8245/gallery or
+use the Component gallery button in Settings or About. Every button variant,
+loading state, dialog, toast, skeleton and progress bar is shown there with its
+accessibility notes. The implementation guide lives in
+[docs/dev/LauncherUI.md](../dev/LauncherUI.md).
+
 ## Customization
 
 Settings applies instantly and remembers itself in the browser:

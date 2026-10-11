@@ -96,6 +96,31 @@ body {
   }
 }
 
+@keyframes slide-track {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(420%);
+  }
+}
+
+.progress-indeterminate {
+  animation: slide-track 1.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .progress-indeterminate {
+    animation: none;
+    transform: translateX(140%);
+  }
+}
+
+html[data-motion="reduced"] .progress-indeterminate {
+  animation: none;
+  transform: translateX(140%);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ribbon-a,
   .ribbon-b,

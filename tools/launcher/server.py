@@ -408,6 +408,13 @@ class Handler(BaseHTTPRequestHandler):
         if SETUP_JOB["state"] == "running":
             self.send_json({"state": "running"})
             return
+        source_ready = self.web_source is not None and (self.web_source / "package.json").is_file()
+        if not source_ready:
+            self.send_json(
+                {"error": "This launcher build ships the UI pre-installed, so setup is not available."},
+                409,
+            )
+            return
         reset_setup_job()
         self.send_json({"state": "running"})
         threading.Thread(target=run_setup, args=(self.web_source, self.library.games_dir), daemon=True).start()
@@ -877,13 +884,20 @@ SETUP_PAGE = """<!doctype html>
 </body>
 </html>"""
 
+def default_web_dir():
+    bundled = getattr(sys, "_MEIPASS", None)
+    if bundled and (Path(bundled) / "dist" / "index.html").is_file():
+        return Path(bundled) / "dist"
+    return Path(__file__).resolve().parent / "web" / "dist"
+
+
 def main():
     parser = argparse.ArgumentParser(description="LeonPS5 home launcher server")
     parser.add_argument("--games-dir", default=os.environ.get("LEONPS5_GAMES_DIR"))
     parser.add_argument("--no-config", action="store_true", help="ignore the saved launcher configuration")
     parser.add_argument("--port", type=int, default=8245)
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--web-dir", default=str(Path(__file__).resolve().parent / "web" / "dist"))
+    parser.add_argument("--web-dir", default=str(default_web_dir()))
     parser.add_argument("--runner", default=None)
     parser.add_argument("--open", action="store_true", help="open the launcher in the default browser")
     args = parser.parse_args()

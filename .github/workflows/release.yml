@@ -3,6 +3,12 @@ name: Release
 on:
   push:
     tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Existing tag to build and release (v...)'
+        required: true
+        default: ''
 
 permissions:
   contents: read
@@ -10,9 +16,6 @@ permissions:
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
-
-env:
-  RELEASE_TAG: ${{ github.ref_name }}
   CONFIGURE: >-
     -G Ninja -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=ON
     -DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++
@@ -38,10 +41,13 @@ jobs:
     defaults:
       run:
         shell: bash
+    env:
+      RELEASE_TAG: ${{ inputs.version || github.ref_name }}
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: true
+          ref: ${{ inputs.version || github.ref }}
       - id: toolchain
         if: matrix.platform == 'windows'
         uses: actions/cache@v6
@@ -128,8 +134,11 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
+      RELEASE_TAG: ${{ inputs.version || github.ref_name }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.version || github.ref }}
       - uses: actions/download-artifact@v8
         with:
           pattern: release-*

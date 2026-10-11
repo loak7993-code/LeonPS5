@@ -31,7 +31,7 @@ STEPS = [
     # Release build.
     "cd /kaggle/LeonPS5 && cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release "
     "-DBUILD_TESTING=ON -DFFMPEG_PREBUILT_DIR=/kaggle/ffmpeg-prebuilt",
-    "cd /kaggle/LeonPS5 && cmake --build build --parallel 2",
+    "cd /kaggle/LeonPS5 && cmake --build build --parallel 4",
     # The full suite. Kaggle GPUs are T4/L4; the mesh tests skip or run per the
     # device's mesh-shader support and the summary shows which.
     "cd /kaggle/LeonPS5 && ctest --test-dir build --output-on-failure --timeout 180 -j2 "

@@ -29,6 +29,11 @@ STEPS = [
     "tail -40 /kaggle/working/ctest-summary.txt",
     # GPU-only verdict: the tests that skip on llvmpipe.
     "grep -E 'agc_driver_mesh|agc_driver_graphics' /kaggle/working/ctest-summary.txt || true",
+    # The mesh skip reason goes to the worker stdout that ctest hides; run the
+    # test directly so the device verdict lands in the kernel output.
+    "cd /kaggle/LeonPS5 && ./build/tests/agc_driver_mesh_tests "
+    "> /kaggle/working/mesh-direct.txt 2>&1 || true",
+    "cat /kaggle/working/mesh-direct.txt || true",
 ]
 
 

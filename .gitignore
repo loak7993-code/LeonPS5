@@ -98,6 +98,8 @@ downloads/
 *.png
 
 *.json
+!tools/launcher/web/package.json
+!tools/launcher/web/tsconfig.json
 !tools/launcher/web/package-lock.json
 !demo/web/i18n/*.json
 

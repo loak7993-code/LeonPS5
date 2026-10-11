@@ -48,6 +48,8 @@ library change without it therefore tests the previous binaries and can show no 
 
 [Relinker usage and runtime layout](../user/USAGE.md).
 
+The GPU execution tests need a real Vulkan device; [GPU cloud testing](GpuCloudTest.md) has the Colab cell and the Kaggle path.
+
 ## One-command runner
 
 ```sh

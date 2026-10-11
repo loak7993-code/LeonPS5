@@ -23,6 +23,10 @@
 #endif
 
 extern "C" int APS5_VABI sceKernelAvailableFlexibleMemorySize(size_t* size);
+extern "C" int APS5_VABI sceKernelAllocateDirectMemory(std::int64_t start, std::int64_t search_end, std::size_t size, std::size_t alignment, std::int64_t memory_type, std::int64_t* physical);
+extern "C" int APS5_VABI sceKernelMapDirectMemory(void** addr, std::size_t len, int prot, int flags, std::int64_t direct_memory_start, std::size_t alignment);
+extern "C" int APS5_VABI sceKernelMunmap(void* addr, std::size_t len);
+extern "C" int APS5_VABI sceKernelReleaseDirectMemory(std::int64_t start, std::size_t len);
 
 namespace {
 
@@ -71,24 +75,6 @@ void testCatalog() {
         {24, "RELEASE_MEM_CUSTOM"}, {25, "DMA_DATA_CUSTOM"}, {26, "CONTEXT_STATE"}
     }};
     for (const auto& [id, name] : custom) check(AgcDriver::Pm4::Name(makePacket(0x10, {0}, id << 2)[0]) == name, "custom opcode name mismatch");
-}
-
-void testDrawIndexMultiInstanced() {
-    alignas(4) std::array<std::uint32_t, 8> indices{};
-    AgcDriver::QueueState state;
-    state.indexType = 0;
-    state.indexBase = reinterpret_cast<std::uintptr_t>(indices.data());
-    state.userConfig[0x24a] = 0x140;
-    const std::uint32_t address = static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(indices.data()));
-    const std::uint32_t high = static_cast<std::uint32_t>(reinterpret_cast<std::uintptr_t>(indices.data()) >> 32u);
-    const std::vector<std::uint32_t> packet = makePacket(0x3a, {0x28, address, high, 3, 0, 0, 0, 0x20});
-    check(packet.size() == 9, "the 9-word multi-instanced draw was not built");
-    AgcDriver::Pm4::Validate(packet, 0);
-    const auto draw = AgcDriver::Pm4::ResolveDraw(packet, state);
-    check(draw.indexed && draw.indexAddress == state.indexBase && draw.indexCount == 0x28 && draw.instanceCount == 3 && draw.indexSize == 2 && draw.firstVertex == 0x140 && draw.flags == 0x20, "multi-instanced draw state mismatch");
-    expectFailure([&] { AgcDriver::Pm4::Validate(makePacket(0x3a, {0x28, address, high, 0, 0, 0, 0, 0x20}), 0); }, "the instance count is zero");
-    expectFailure([&] { AgcDriver::Pm4::Validate(makePacket(0x3a, {0x28, address, high, 3, 0, 0, 0, 0x20, 7}), 0); }, "per-instance object data has no executor contract");
-    expectFailure([&] { AgcDriver::Pm4::Validate(makePacket(0x3a, {0x28, address, high, 3, 0, 0, 0, 0x20}), 0x20); }, "graphics packet in compute queue");
 }
 
 void testNopPad() {
@@ -262,6 +248,12 @@ void testIndexedDraw() {
     check(offsetDraw.indexed && offsetDraw.firstVertex == 0xd4d4, "DRAW_INDEX_OFFSET_2 ignored GE_INDX_OFFSET");
     const auto address = reinterpret_cast<std::uintptr_t>(indices.data());
     const auto explicitDraw = AgcDriver::Pm4::ResolveDraw(makePacket(0x27, {4, static_cast<std::uint32_t>(address), static_cast<std::uint32_t>(address >> 32u), 4, 0}), state);
+    state.userConfig[0x24a] = 0xd4d4;
+    const auto multiPacket = makePacket(0x3a, {4, static_cast<std::uint32_t>(address), static_cast<std::uint32_t>(address >> 32u), 4, 0, 0, 3, 0x80});
+    AgcDriver::Pm4::Validate(multiPacket, 0);
+    const auto multiDraw = AgcDriver::Pm4::ResolveDraw(multiPacket, state);
+    check(multiDraw.indexed && multiDraw.indexAddress == address && multiDraw.indexCount == 4 && multiDraw.instanceCount == 3 && multiDraw.flags == 0x80, "DRAW_INDEX_MULTI_INSTANCED decode mismatch");
+    expectFailure([&] { AgcDriver::Pm4::ResolveDraw(makePacket(0x3a, {4, static_cast<std::uint32_t>(address), static_cast<std::uint32_t>(address >> 32u), 4, 0, 0, 9, 0x80}), state); }, "the instance count exceeds the maximum");
     check(explicitDraw.indexed && explicitDraw.firstVertex == 0xd4d4 && explicitDraw.indexAddress == address, "DRAW_INDEX_2 ignored GE_INDX_OFFSET");
     state.userConfig.erase(0x24a);
     expectFailure([&] { AgcDriver::Pm4::ResolveDraw(packet, state); }, "GE_INDX_OFFSET");
@@ -1051,7 +1043,6 @@ int main(int argc, char** argv) {
             return 0;
         }
         testCatalog();
-        testDrawIndexMultiInstanced();
         testNopPad();
         testWriteChangedKeepsUntouchedBytes();
         testRegisters();

@@ -301,10 +301,10 @@ void Validate(std::span<const std::uint32_t> packet, std::uint32_t queue) {
             break;
         case 0x3a:
             graphics();
-            require(packet.size() >= 9u, "DRAW_INDEX_MULTI_INSTANCED is shorter than its 9-word header");
-            require(packet[4] != 0u, "the instance count is zero");
-            require(packet.size() == 9u, "per-instance object data has no executor contract; expanding to one instanced draw is the only supported form");
-            require(packet[3] <= 0xffffu, "unsupported index address bits");
+            size(9);
+            require(packet[7] != 0u, "the instance count is zero");
+            require(packet[7] <= packet[4], "the instance count exceeds the maximum");
+            require((packet[8] & ~0xa0u) == 0u, "unsupported multi-instanced draw flags");
             break;
         case 0x35:
             graphics();
@@ -742,14 +742,15 @@ DrawParameters ResolveDraw(std::span<const std::uint32_t> packet, const QueueSta
         return {0, packet[1], 0, queue.instanceCount, packet[2] & 0x20u, false, firstVertex, 0};
     }
     const auto opcode = (packet[0] >> 8u) & 0xffu;
-    const bool explicitAddress = opcode == 0x27 || opcode == 0x3a;
+    const bool multiInstanced = opcode == 0x3a;
+    const bool explicitAddress = opcode == 0x27 || multiInstanced;
     require(explicitAddress || opcode == 0x35, "expected indexed draw packet");
     require(queue.indexType <= 2, "unsupported index type");
     const std::uint32_t indexSize = queue.indexType == 0 ? 2 : queue.indexType == 1 ? 4 : 1;
     const auto base = explicitAddress ? address(packet[2], packet[3]) : queue.indexBase;
-    const auto count = explicitAddress ? (opcode == 0x3a ? packet[1] : packet[4]) : packet[3];
+    const auto count = explicitAddress ? (multiInstanced ? packet[1] : packet[4]) : packet[3];
     require(base != 0 && base % indexSize == 0, "null or misaligned index base");
-    const auto offset = explicitAddress ? 0 : static_cast<std::uint64_t>(packet[2]) * indexSize;
+    const auto offset = opcode == 0x35 ? static_cast<std::uint64_t>(packet[2]) * indexSize : 0u;
     require(offset <= std::numeric_limits<std::uint64_t>::max() - base, "index address overflow");
     const auto address = base + offset;
     const auto bytes = static_cast<std::uint64_t>(count) * indexSize;
@@ -758,8 +759,8 @@ DrawParameters ResolveDraw(std::span<const std::uint32_t> packet, const QueueSta
     APS5_LOG_OUT_DEBUG("ResolveDraw context targetMask=0x%x shaderMask=0x%x indexCount=%u indexType=%u instances=%u", queue.context.contains(0x8e) ? queue.context.at(0x8e) : 0u, queue.context.contains(0x8f) ? queue.context.at(0x8f) : 0u, count, queue.indexType, queue.instanceCount);
     const auto indexOffset = queue.userConfig.find(0x24a);
     require(indexOffset != queue.userConfig.end(), "missing GE_INDX_OFFSET register");
-    const auto flags = opcode == 0x3a ? (packet[8] & 0x20u) : packet.back();
-    const auto instances = opcode == 0x3a ? packet[4] : queue.instanceCount;
+    const auto flags = multiInstanced ? (packet[8] & 0xa0u) : packet.back();
+    const auto instances = multiInstanced ? packet[7] : queue.instanceCount;
     return {address, count, indexSize, instances, flags, true, indexOffset->second, 0};
 }
 

@@ -16,13 +16,18 @@ STEPS = [
     # over the driver's Vulkan library.
     "dpkg -i /kaggle/input/leonps5-source/debs/*.deb || true",
     "mkdir -p /usr/share/vulkan/icd.d",
-    "NVICD=$(ls /usr/lib/x86_64-linux-gnu/libnvidia*vulkan* 2>/dev/null | head -1)",
-    "printf '{\"ICD\":{\"library_path\":\"%s\",\"api_version\":\"1.3.204\"}}\n' \"$NVICD\" > /usr/share/vulkan/icd.d/nvidia_icd.json",
-    "cat /usr/share/vulkan/icd.d/nvidia_icd.json",
+
+    "NVLIB=$(find /usr/local/nvidia /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-gnu/nvidia -maxdepth 3 -name 'libGLX_nvidia.so*' 2>/dev/null | head -1)",
+    "echo nvidia icd library: $NVLIB",
+    "if [ -n \"$NVLIB\" ]; then printf '{\"ICD\":{\"library_path\":\"%s\",\"api_version\":\"1.3.204\"}}\n' \"$NVLIB\" > /usr/share/vulkan/icd.d/nvidia_icd.json; fi",
+    "cat /usr/share/vulkan/icd.d/nvidia_icd.json 2>/dev/null || true",
+    "export LEONPS5_GPU=NVIDIA",
     "ls /usr/lib/x86_64-linux-gnu/ | grep -iE 'nvidia|vulkan' | head -12",
     # The source tree comes from the attached dataset (the kernel has no
     # internet, so nothing is cloned).
     "cp -a /kaggle/input/leonps5-source/leonps5-src /kaggle/LeonPS5",
+    "cp -a /kaggle/input/leonps5-source/leonps5-build /kaggle/LeonPS5-build",
+    "cp -a /kaggle/LeonPS5-build /kaggle/LeonPS5/build",
     "cp -a /kaggle/input/leonps5-source/ffmpeg-prebuilt /kaggle/ffmpeg-prebuilt",
     # Vulkan report first: which device did the runtime give us.
     "python3 -c \"import shutil; print(shutil.which('vulkaninfo'))\" || true",
@@ -31,10 +36,12 @@ STEPS = [
     # Release build.
     "cd /kaggle/LeonPS5 && cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release "
     "-DBUILD_TESTING=ON -DFFMPEG_PREBUILT_DIR=/kaggle/ffmpeg-prebuilt",
-    "cd /kaggle/LeonPS5 && cmake --build build --parallel 4",
+    "cd /kaggle/LeonPS5/build && ninja -n | grep -cE '^$' || true; "
+    "ninja -n 2>/dev/null | tail -1",
+    "cd /kaggle/LeonPS5 && ninja -C build 2>&1 | tail -2 || true",
     # The full suite. Kaggle GPUs are T4/L4; the mesh tests skip or run per the
     # device's mesh-shader support and the summary shows which.
-    "cd /kaggle/LeonPS5 && ctest --test-dir build --output-on-failure --timeout 180 -j2 "
+    "cd /kaggle/LeonPS5 && ctest --test-dir build --output-on-failure --timeout 180 -j4 "
     "> /kaggle/working/ctest-summary.txt 2>&1 || true",
     "tail -40 /kaggle/working/ctest-summary.txt",
     # GPU-only verdict: the tests that skip on llvmpipe.

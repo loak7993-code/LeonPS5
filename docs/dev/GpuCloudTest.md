@@ -46,6 +46,22 @@ The tests that skip on llvmpipe and run on a real device:
 - The AGC execution set with real pipeline libraries and render targets (`agc_driver_graphics*`).
 - The full suite is the same 699-test set; a GPU only un-skips the device-dependent part.
 
+## Kaggle account gate: unverified phones get no driver userspace
+
+A probe kernel on the GPU runtime showed what the image actually contains for an
+account without phone verification: the GPU device is attached, but there are no
+NVIDIA userspace libraries at all (no `libnvidia-*` anywhere, no `nvidia-smi`,
+`/etc/vulkan/icd.d` empty). `vkCreateInstance` therefore fails with
+`VK_ERROR_INCOMPATIBLE_DRIVER` (-9) no matter which accelerator (T4 or L4) the
+session picks; only `llvmpipe` would work, and the loader deb fixes the loader
+but not the absent vendor ICD. The vendor libraries are also not installable:
+the runtime has no internet (the same phone-verification gate blocks it) and the
+driver version must match the passthrough kernel module anyway.
+
+The account-level fix: verify a phone number at kaggle.com `Settings > Phone`.
+That enables kernel internet, after which the install steps in the kernel script
+can pull the vendor ICD packages and the GPU execution tests run for real.
+
 ## Why not the local container
 
 This development container's GPU is a `virtio-gpu` display device without the host-side Venus Vulkan backend, so Vulkan enumerates only `llvmpipe` (software). There is no host GPU to enable from inside the VM, and the CoreWeave SSH boxes in the SSH config are currently closed on all their ports.

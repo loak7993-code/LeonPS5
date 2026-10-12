@@ -235,6 +235,86 @@ export function SettingsPage({
                   onChange={(on) => onPref("backdrop", on)}
                 />
               </SettingsRow>
+              <SettingsRow
+                label="Accent glow haze"
+                hint="Faint luminous glow in the screen corners, tinted by the accent"
+              >
+                <Switch
+                  label="Accent glow haze"
+                  checked={prefs.accentGlow}
+                  onChange={(on) => onPref("accentGlow", on)}
+                />
+              </SettingsRow>
+              {prefs.accentGlow && (
+                <SettingsRow label="Glow intensity" hint="Strength of the corner glow">
+                  <Slider
+                    label="Glow intensity"
+                    value={prefs.glowIntensity}
+                    min={0}
+                    max={100}
+                    step={5}
+                    onChange={(value) => onPref("glowIntensity", value)}
+                    format={(value) => `${value}%`}
+                  />
+                </SettingsRow>
+              )}
+              <SettingsRow label="Card shadow" hint="Colored glow under the selected card">
+                <Switch
+                  label="Card shadow"
+                  checked={prefs.cardShadow}
+                  onChange={(on) => onPref("cardShadow", on)}
+                />
+              </SettingsRow>
+              <SettingsRow label="Corner radius" hint="Rounding of cards and panels, in pixels">
+                <Slider
+                  label="Corner radius"
+                  value={prefs.cornerRadius}
+                  min={0}
+                  max={28}
+                  step={2}
+                  onChange={(value) => onPref("cornerRadius", value)}
+                  format={(value) => `${value}px`}
+                />
+              </SettingsRow>
+              <SettingsRow label="Top bar" hint="How the top bar sits over the page">
+                <Segmented
+                  label="Top bar"
+                  value={prefs.topBarStyle}
+                  onChange={(value) => onPref("topBarStyle", value)}
+                  options={[
+                    { value: "glass", label: "Glass" },
+                    { value: "solid", label: "Solid" },
+                    { value: "transparent", label: "Flat" },
+                  ]}
+                />
+              </SettingsRow>
+              <SettingsRow label="Wordmark" hint="LeonPS5 label in the top bar">
+                <Switch
+                  label="Wordmark"
+                  checked={prefs.showWordmark}
+                  onChange={(on) => onPref("showWordmark", on)}
+                />
+              </SettingsRow>
+              <SettingsRow label="Wave lines" hint="Decorative flowing lines in the background">
+                <Switch
+                  label="Wave lines"
+                  checked={prefs.waveOpacity > 0}
+                  onChange={(on) => onPref("waveOpacity", on ? 100 : 0)}
+                />
+              </SettingsRow>
+              {prefs.waveOpacity > 0 && (
+                <SettingsRow label="Wave strength" hint="Visibility of the wave lines">
+                  <Slider
+                    label="Wave strength"
+                    value={prefs.waveOpacity}
+                    min={10}
+                    max={100}
+                    step={10}
+                    onChange={(value) => onPref("waveOpacity", value)}
+                    format={(value) => `${value}%`}
+                  />
+                </SettingsRow>
+              )}
               {prefs.backdrop && (
                 <>
                   <SettingsRow label="Backdrop blur" hint="How much the backdrop art is blurred">

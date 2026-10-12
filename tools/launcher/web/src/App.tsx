@@ -71,6 +71,8 @@ function Launcher() {
   );
   const [prefs, setPref] = usePrefs();
   const [gestured, setGestured] = useState(false);
+  const glow = (prefs.accentGlow ? (prefs.glowIntensity / 100) * 0.14 : 0);
+  const waveOp = prefs.waveOpacity / 100;
   const { toast } = useToast();
   const searchRef = useRef<HTMLInputElement>(null);
   const anchorRef = useRef<string | null>(null);
@@ -254,7 +256,21 @@ function Launcher() {
 
   return (
     <div className="flex h-full flex-col">
-      <Background game={!blocked && prefs.backdrop ? selected : null} blur={prefs.backdropBlur} opacity={prefs.backdropOpacity} />
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          pointerEvents: "none",
+          background: `radial-gradient(48vw 36vw at -6% -10%, rgba(47,107,255,${glow}), transparent 70%), radial-gradient(52vw 40vw at 106% 108%, rgba(63,169,201,${glow * 0.65}), transparent 70%)`,
+          zIndex: 0,
+        }}
+      />
+      <Background
+        game={!blocked && prefs.backdrop ? selected : null}
+        blur={prefs.backdropBlur}
+        opacity={prefs.backdropOpacity}
+        waveOpacity={waveOp}
+      />
       <TopBar
         ref={searchRef}
         index={nav.row === 0 ? nav.topIndex : -1}
@@ -272,6 +288,8 @@ function Launcher() {
         onAbout={() => setOverlay("about")}
         musicOn={prefs.music}
         onMusicToggle={() => setPref("music", !prefs.music)}
+        topBarStyle={prefs.topBarStyle}
+        showWordmark={prefs.showWordmark}
         onPower={() => setOverlay("power")}
       />
       {library === null && loadError === null ? (
@@ -293,6 +311,8 @@ function Launcher() {
           onSelect={nav.setCardIndex}
           onActivate={activate}
           gap={prefs.cardGap === "compact" ? 10 : prefs.cardGap === "spacious" ? 28 : 18}
+          radius={prefs.cornerRadius}
+          shadow={prefs.cardShadow}
         />
       )}
       <BottomBar

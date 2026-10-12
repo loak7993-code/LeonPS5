@@ -11,9 +11,11 @@ type CardProps = {
   selected: boolean;
   onSelect: (id: string) => void;
   onActivate: (game: Game) => void;
+  radius: number;
+  shadow: boolean;
 };
 
-const Card = memo(function Card({ game, selected, onSelect, onActivate }: CardProps) {
+const Card = memo(function Card({ game, selected, onSelect, onActivate, radius, shadow }: CardProps) {
   return (
     <motion.button
       type="button"
@@ -21,8 +23,9 @@ const Card = memo(function Card({ game, selected, onSelect, onActivate }: CardPr
       onMouseEnter={() => onSelect(game.id)}
       onFocus={() => onSelect(game.id)}
       onClick={() => onActivate(game)}
-      className={`relative aspect-square w-[var(--card-w)] shrink-0 overflow-hidden rounded-[14px] bg-panel ${
-        selected ? "card-selected" : "shadow-[0_0_0_1px_rgba(151,163,224,0.12)]"
+      style={{ borderRadius: radius }}
+      className={`relative aspect-square w-[var(--card-w)] shrink-0 overflow-hidden bg-panel ${
+        selected ? (shadow ? "card-selected" : "card-selected-no-glow") : "card-idle"
       }`}
       animate={{ scale: selected ? 1.08 : 1, y: selected ? -6 : 0 }}
       transition={{ type: "spring", stiffness: 260, damping: 22 }}
@@ -57,11 +60,14 @@ type RailProps = {
   onSelect: (index: number) => void;
   onActivate: (game: Game) => void;
   gap?: number;
+  radius?: number;
+  shadow?: boolean;
 };
 
-export function Rail({ games, index, searching, onSelect, onActivate, gap: gapProp }: RailProps) {
+export function Rail({ games, index, searching, onSelect, onActivate, gap: gapProp, radius: radiusProp, shadow }: RailProps) {
   const railRef = useRef<HTMLDivElement>(null);
   const GAP = gapProp ?? 18;
+  const radius = radiusProp ?? 14;
   const cardWidth = useCardWidth(railRef, games.length);
 
   const selectById = useCallback(
@@ -118,6 +124,8 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
                   selected={position === index && !searching}
                   onSelect={selectById}
                   onActivate={activate}
+                  radius={radius}
+                  shadow={shadow ?? true}
                 />
               ))}
             </motion.div>

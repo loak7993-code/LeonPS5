@@ -2,11 +2,12 @@ import { AnimatePresence, motion } from "motion/react";
 import { GameArt } from "./Art";
 import { iconUrl, type Game } from "./api";
 
-function Ribbons() {
+function Ribbons({ waveOpacity = 100 }: { waveOpacity?: number }) {
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
       <svg
-        className="ribbon-a absolute top-[16%] left-[-20%] h-[300px] w-[140%] opacity-[0.16]"
+        style={{ opacity: waveOpacity * 0.16 / 100 }}
+        className="ribbon-a absolute top-[16%] left-[-20%] h-[300px] w-[140%]"
         viewBox="0 0 1440 300"
         fill="none"
         preserveAspectRatio="none"
@@ -32,7 +33,8 @@ function Ribbons() {
         />
       </svg>
       <svg
-        className="ribbon-b absolute top-[58%] left-[-20%] h-[260px] w-[140%] opacity-[0.1]"
+        style={{ opacity: waveOpacity * 0.1 / 100 }}
+        className="ribbon-b absolute top-[58%] left-[-20%] h-[260px] w-[140%]"
         viewBox="0 0 1440 260"
         fill="none"
         preserveAspectRatio="none"
@@ -60,7 +62,7 @@ function GlowHaze() {
   );
 }
 
-type BackdropProps = { game: Game | null; blur?: number; opacity?: number };
+type BackdropProps = { game: Game | null; blur?: number; opacity?: number; waveOpacity?: number };
 
 function ArtBackdrop({ game, blur = 64, opacity = 55 }: BackdropProps) {
   return (
@@ -93,7 +95,7 @@ function ArtBackdrop({ game, blur = 64, opacity = 55 }: BackdropProps) {
   );
 }
 
-export function Background({ game, blur = 64, opacity = 55 }: BackdropProps) {
+export function Background({ game, blur = 64, opacity = 55, waveOpacity = 100 }: BackdropProps) {
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ background: "var(--color-canvas)" }}>
       <ArtBackdrop game={game} blur={blur} opacity={opacity} />
@@ -106,7 +108,7 @@ export function Background({ game, blur = 64, opacity = 55 }: BackdropProps) {
         }}
       />
       <GlowHaze />
-      <Ribbons />
+      <Ribbons waveOpacity={waveOpacity} />
     </div>
   );
 }

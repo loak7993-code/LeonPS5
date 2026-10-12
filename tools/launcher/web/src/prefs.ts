@@ -15,6 +15,13 @@ export type Prefs = {
   musicVolume: number;
   cardGap: "compact" | "normal" | "spacious";
   waveSpeed: number;
+  glowIntensity: number;
+  cornerRadius: number;
+  showWordmark: boolean;
+  accentGlow: boolean;
+  waveOpacity: number;
+  cardShadow: boolean;
+  topBarStyle: "glass" | "solid" | "transparent";
 };
 
 const KEY = "leonps5-launcher-prefs";
@@ -50,6 +57,13 @@ const DEFAULTS: Prefs = {
   musicVolume: 40,
   cardGap: "normal",
   waveSpeed: 1,
+  glowIntensity: 50,
+  cornerRadius: 14,
+  showWordmark: true,
+  accentGlow: true,
+  waveOpacity: 100,
+  cardShadow: true,
+  topBarStyle: "glass",
 };
 
 function read(): Prefs {
@@ -86,6 +100,25 @@ function read(): Prefs {
         typeof parsed.waveSpeed === "number"
           ? Math.max(0.25, Math.min(3, parsed.waveSpeed))
           : 1,
+      glowIntensity:
+        typeof parsed.glowIntensity === "number"
+          ? Math.max(0, Math.min(100, parsed.glowIntensity))
+          : 50,
+      cornerRadius:
+        typeof parsed.cornerRadius === "number"
+          ? Math.max(0, Math.min(28, parsed.cornerRadius))
+          : 14,
+      showWordmark: parsed.showWordmark !== false,
+      accentGlow: parsed.accentGlow !== false,
+      waveOpacity:
+        typeof parsed.waveOpacity === "number"
+          ? Math.max(0, Math.min(100, parsed.waveOpacity))
+          : 100,
+      cardShadow: parsed.cardShadow !== false,
+      topBarStyle:
+        parsed.topBarStyle === "solid" || parsed.topBarStyle === "transparent"
+          ? parsed.topBarStyle
+          : "glass",
     };
   } catch {
     return DEFAULTS;

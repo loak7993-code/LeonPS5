@@ -59,6 +59,14 @@ body {
     0 18px 50px color-mix(in oklab, var(--color-accent) 34%, transparent);
 }
 
+.card-selected-no-glow {
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.88);
+}
+
+.card-idle {
+  box-shadow: 0 0 0 1px rgba(151, 163, 224, 0.12);
+}
+
 @keyframes drift {
   from {
     transform: translate3d(-4%, 0, 0);

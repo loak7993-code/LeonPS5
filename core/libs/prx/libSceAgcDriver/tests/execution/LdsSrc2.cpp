@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <iostream>
 #include <optional>
+#include <spirv/unified1/spirv.hpp>
 #include <string>
 #include <vector>
 
@@ -181,6 +182,11 @@ int main() {
     try {
         const auto device = OpenVulkanTestDevice();
         if (!device) return VulkanTestSkipped;
+        {
+            const auto target = device->Target();
+            const bool i64a = std::find(target.supportedCapabilities.begin(), target.supportedCapabilities.end(), static_cast<std::uint32_t>(spv::CapabilityInt64Atomics)) != target.supportedCapabilities.end();
+            std::fprintf(stderr, "target subgroup=%u int64atomics=%d caps=%zu\n", target.subgroupSize, i64a ? 1 : 0, target.supportedCapabilities.size());
+        }
         Run(*device);
         CheckLanes();
         CheckAddressOffsetRejected(*device);

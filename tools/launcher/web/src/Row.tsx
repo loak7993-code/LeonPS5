@@ -4,7 +4,6 @@ import { GameArt } from "./Art";
 import { iconUrl, type Game } from "./api";
 import { relativeTime } from "./data";
 
-const GAP = 18;
 const LEAD = 72;
 
 type CardProps = {
@@ -57,10 +56,12 @@ type RailProps = {
   searching: boolean;
   onSelect: (index: number) => void;
   onActivate: (game: Game) => void;
+  gap?: number;
 };
 
-export function Rail({ games, index, searching, onSelect, onActivate }: RailProps) {
+export function Rail({ games, index, searching, onSelect, onActivate, gap: gapProp }: RailProps) {
   const railRef = useRef<HTMLDivElement>(null);
+  const GAP = gapProp ?? 18;
   const cardWidth = useCardWidth(railRef, games.length);
 
   const selectById = useCallback(

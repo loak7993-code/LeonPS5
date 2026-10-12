@@ -9,7 +9,12 @@ export type Prefs = {
   cardSize: CardSize;
   motion: "full" | "reduced";
   backdrop: boolean;
+  backdropBlur: number;
+  backdropOpacity: number;
   music: boolean;
+  musicVolume: number;
+  cardGap: "compact" | "normal" | "spacious";
+  waveSpeed: number;
 };
 
 const KEY = "leonps5-launcher-prefs";
@@ -20,6 +25,12 @@ const ACCENTS: Record<Accent, string> = {
   emerald: "#2fb87a",
   orange: "#e08a3c",
   red: "#e0524f",
+};
+
+export const CARD_GAPS: Record<Prefs["cardGap"], string> = {
+  compact: "10px",
+  normal: "18px",
+  spacious: "28px",
 };
 
 const CARD_WIDTH: Record<CardSize, string> = {
@@ -33,7 +44,12 @@ const DEFAULTS: Prefs = {
   cardSize: "medium",
   motion: "full",
   backdrop: true,
+  backdropBlur: 64,
+  backdropOpacity: 55,
   music: true,
+  musicVolume: 40,
+  cardGap: "normal",
+  waveSpeed: 1,
 };
 
 function read(): Prefs {
@@ -49,7 +65,27 @@ function read(): Prefs {
         cardSize !== undefined && cardSize in CARD_WIDTH ? (cardSize as CardSize) : DEFAULTS.cardSize,
       motion: parsed.motion === "reduced" ? "reduced" : "full",
       backdrop: parsed.backdrop !== false,
+      backdropBlur:
+        typeof parsed.backdropBlur === "number"
+          ? Math.max(0, Math.min(96, parsed.backdropBlur))
+          : 64,
+      backdropOpacity:
+        typeof parsed.backdropOpacity === "number"
+          ? Math.max(10, Math.min(90, parsed.backdropOpacity))
+          : 55,
       music: parsed.music !== false,
+      musicVolume:
+        typeof parsed.musicVolume === "number"
+          ? Math.max(0, Math.min(100, parsed.musicVolume))
+          : 40,
+      cardGap:
+        typeof parsed.cardGap === "string" && parsed.cardGap in CARD_GAPS
+          ? (parsed.cardGap as keyof typeof CARD_GAPS)
+          : ("normal" as const),
+      waveSpeed:
+        typeof parsed.waveSpeed === "number"
+          ? Math.max(0.25, Math.min(3, parsed.waveSpeed))
+          : 1,
     };
   } catch {
     return DEFAULTS;

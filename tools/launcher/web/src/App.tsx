@@ -16,13 +16,13 @@ import { Rail } from "./Row";
 import { BottomBar } from "./BottomBar";
 import { EmptyState } from "./EmptyState";
 import { LaunchOverlay, StoppedScreen } from "./LaunchOverlay";
-import { SettingsSheet } from "./sheets/Settings";
+import { SettingsPage } from "./sheets/Settings";
 import { GridSheet } from "./sheets/LibraryGrid";
 import { AboutSheet, PowerSheet } from "./sheets/AboutPower";
 import { Onboarding } from "./Onboarding";
 import { lazy, Suspense } from "react";
 import { usePrefs } from "./prefs";
-import { startAmbience, stopAmbience, unlock } from "./ambience";
+import { startAmbience, stopAmbience, unlock, setVolume } from "./ambience";
 
 const Gallery = lazy(() => import("./Gallery"));
 
@@ -183,12 +183,13 @@ function Launcher() {
       stopAmbience();
       return;
     }
+    setVolume(prefs.musicVolume / 100);
     if (prefs.music && overlay === null && flow.launch === null && !searching) {
       startAmbience();
     } else {
       stopAmbience();
     }
-  }, [gestured, prefs.music, overlay, flow.launch, searching, stopped]);
+  }, [gestured, prefs.music, prefs.musicVolume, overlay, flow.launch, searching, stopped]);
 
   useEffect(() => {
     if (!anchorRef.current) return;
@@ -253,7 +254,7 @@ function Launcher() {
 
   return (
     <div className="flex h-full flex-col">
-      <Background game={!blocked && prefs.backdrop ? selected : null} />
+      <Background game={!blocked && prefs.backdrop ? selected : null} blur={prefs.backdropBlur} opacity={prefs.backdropOpacity} />
       <TopBar
         ref={searchRef}
         index={nav.row === 0 ? nav.topIndex : -1}
@@ -267,7 +268,7 @@ function Launcher() {
           setGridIndex(Math.min(nav.cardIndex, Math.max(0, games.length - 1)));
           setOverlay("grid");
         }}
-        onSettings={() => setOverlay("settings")}
+        onSettings={() => setOverlay("settings" as Overlay)}
         onAbout={() => setOverlay("about")}
         musicOn={prefs.music}
         onMusicToggle={() => setPref("music", !prefs.music)}
@@ -291,6 +292,7 @@ function Launcher() {
           searching={searching}
           onSelect={nav.setCardIndex}
           onActivate={activate}
+          gap={prefs.cardGap === "compact" ? 10 : prefs.cardGap === "spacious" ? 28 : 18}
         />
       )}
       <BottomBar
@@ -318,7 +320,7 @@ function Launcher() {
         />
       )}
       {overlay === "settings" && library && (
-        <SettingsSheet
+        <SettingsPage
           key="settings"
           library={library}
           onClose={() => setOverlay(null)}

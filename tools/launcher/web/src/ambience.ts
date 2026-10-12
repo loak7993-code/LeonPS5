@@ -1,4 +1,4 @@
-const LEVEL = 0.3;
+let LEVEL = 0.3;
 const FADE_STEP_MS = 90;
 
 let audio: HTMLAudioElement | null = null;
@@ -21,6 +21,13 @@ export function isSupported(): boolean {
 
 export function isPlaying(): boolean {
   return playing;
+}
+
+export function setVolume(volume: number): void {
+  LEVEL = volume * 0.35;
+  if (playing && audio !== null) {
+    fade(LEVEL);
+  }
 }
 
 export function unlock(): void {

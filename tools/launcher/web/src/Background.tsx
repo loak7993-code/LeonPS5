@@ -60,9 +60,9 @@ function GlowHaze() {
   );
 }
 
-type BackdropProps = { game: Game | null };
+type BackdropProps = { game: Game | null; blur?: number; opacity?: number };
 
-function ArtBackdrop({ game }: BackdropProps) {
+function ArtBackdrop({ game, blur = 64, opacity = 55 }: BackdropProps) {
   return (
     <AnimatePresence mode="popLayout">
       {game && (
@@ -70,7 +70,7 @@ function ArtBackdrop({ game }: BackdropProps) {
           key={game.id}
           className="absolute -inset-32"
           initial={{ opacity: 0 }}
-          animate={{ opacity: 0.5 }}
+          animate={{ opacity: opacity / 100 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6, ease: [0.2, 0, 0, 1] }}
         >
@@ -80,10 +80,10 @@ function ArtBackdrop({ game }: BackdropProps) {
               alt=""
               draggable={false}
               className="h-full w-full object-cover"
-              style={{ filter: "blur(64px) brightness(0.5) saturate(1.25)" }}
+              style={{ filter: `blur(${blur}px) brightness(0.5) saturate(1.25)` }}
             />
           ) : (
-            <div className="h-full w-full" style={{ filter: "blur(64px) brightness(0.5) saturate(1.25)" }}>
+            <div className="h-full w-full" style={{ filter: `blur(${blur}px) brightness(0.5) saturate(1.25)` }}>
               <GameArt id={game.id} title={game.title} className="h-full w-full" />
             </div>
           )}
@@ -93,10 +93,10 @@ function ArtBackdrop({ game }: BackdropProps) {
   );
 }
 
-export function Background({ game }: BackdropProps) {
+export function Background({ game, blur = 64, opacity = 55 }: BackdropProps) {
   return (
     <div className="absolute inset-0 overflow-hidden" style={{ background: "var(--color-canvas)" }}>
-      <ArtBackdrop game={game} />
+      <ArtBackdrop game={game} blur={blur} opacity={opacity} />
       <div
         aria-hidden
         className="absolute inset-0"

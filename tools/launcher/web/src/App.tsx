@@ -243,39 +243,43 @@ function Launcher() {
     !blocked && !searching,
   );
 
+  const keyState = useRef({ nav, infoMode, closeInfo, play, filtered, searching, blocked, flow });
+  keyState.current = { nav, infoMode, closeInfo, play, filtered, searching, blocked, flow };
+
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
+      const state = keyState.current;
       if (event.target instanceof HTMLInputElement) return;
-      if (blocked) {
-        if (flow.launch && event.key === "Escape") flow.close();
+      if (state.blocked) {
+        if (state.flow.launch && event.key === "Escape") state.flow.close();
         return;
       }
       if (event.key === "Escape") {
-        if (searching) nav.handlers.current.back();
-        else if (infoMode) closeInfo();
+        if (state.searching) state.nav.handlers.current.back();
+        else if (state.infoMode) state.closeInfo();
         else return;
         event.preventDefault();
         return;
       }
-      if (event.key === "Enter" && infoMode && nav.row === 1) {
+      if (event.key === "Enter" && state.infoMode && state.nav.row === 1) {
         if (Date.now() - pageOpenedAt.current > 300) {
-          const selected = filtered[nav.cardIndex];
-          if (selected) play(selected);
+          const selected = state.filtered[state.nav.cardIndex];
+          if (selected) state.play(selected);
         }
         event.preventDefault();
         return;
       }
-      if (event.key === "ArrowLeft") nav.handlers.current.left();
-      else if (event.key === "ArrowRight") nav.handlers.current.right();
-      else if (event.key === "ArrowUp") nav.handlers.current.up();
-      else if (event.key === "ArrowDown") nav.handlers.current.down();
-      else if (event.key === "Enter") nav.handlers.current.confirm();
+      if (event.key === "ArrowLeft") state.nav.handlers.current.left();
+      else if (event.key === "ArrowRight") state.nav.handlers.current.right();
+      else if (event.key === "ArrowUp") state.nav.handlers.current.up();
+      else if (event.key === "ArrowDown") state.nav.handlers.current.down();
+      else if (event.key === "Enter") state.nav.handlers.current.confirm();
       else return;
       event.preventDefault();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [blocked, infoMode, closeInfo, play, filtered, nav, searching, flow.launch, flow]);
+  }, []);
 
   if (window.location.pathname === "/gallery") {
     return (

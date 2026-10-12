@@ -21,6 +21,7 @@ const Card = memo(function Card({ game, selected, onSelect, onActivate, radius, 
     <motion.button
       type="button"
       aria-label={game.demo ? `${game.title}, demo title` : game.title}
+      data-selected={selected ? "true" : undefined}
       onMouseEnter={() => onSelect(game.id)}
       onFocus={() => onSelect(game.id)}
       onClick={() => onActivate(game)}
@@ -54,34 +55,50 @@ function useCardWidth(railRef: React.RefObject<HTMLDivElement | null>, count: nu
   return cardWidth;
 }
 
-function useInfoTop(
+function useInfoAnchor(
   railRef: React.RefObject<HTMLDivElement | null>,
   sectionRef: React.RefObject<HTMLElement | null>,
   enabled: boolean,
   cardWidth: number,
+  index: number,
   count: number,
-): number {
-  const [top, setTop] = useState(0);
+): { top: number; left: number } {
+  const [anchor, setAnchor] = useState({ top: 0, left: 0 });
 
   useLayoutEffect(() => {
     if (!enabled) return;
     const section = sectionRef.current;
-    const card = railRef.current?.firstElementChild;
-    if (!section || !card) return;
+    const rail = railRef.current;
+    if (!section || !rail) return;
     const update = () => {
-      const sectionTop = section.getBoundingClientRect().top;
-      const cardBottom = card.getBoundingClientRect().bottom;
-      setTop(Math.max(0, cardBottom - sectionTop + 12));
+      const sectionRect = section.getBoundingClientRect();
+      const card = rail.querySelector('[data-selected="true"]') ?? rail.firstElementChild;
+      if (!card) return;
+      const rect = card.getBoundingClientRect();
+      setAnchor({
+        top: Math.max(0, rect.bottom - sectionRect.top + 12),
+        left: Math.max(0, rect.left - sectionRect.left),
+      });
     };
     update();
+    let frames = 0;
+    let raf = 0;
+    const loop = () => {
+      update();
+      frames += 1;
+      if (frames < 40) raf = requestAnimationFrame(loop);
+    };
+    loop();
     const observer = new ResizeObserver(update);
-    observer.observe(card);
+    observer.observe(rail);
     observer.observe(section);
-    if (railRef.current) observer.observe(railRef.current);
-    return () => observer.disconnect();
-  }, [railRef, sectionRef, enabled, cardWidth, count]);
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
+  }, [railRef, sectionRef, enabled, cardWidth, index, count]);
 
-  return top;
+  return anchor;
 }
 
 type RailProps = {
@@ -104,7 +121,7 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
   const GAP = gapProp ?? 18;
   const radius = radiusProp ?? 14;
   const cardWidth = useCardWidth(railRef, games.length);
-  const infoTop = useInfoTop(railRef, sectionRef, info, cardWidth, games.length);
+  const infoAnchor = useInfoAnchor(railRef, sectionRef, info, cardWidth, index, games.length);
 
   const selectById = useCallback(
     (id: string) => {
@@ -148,8 +165,8 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
           {selected && !searching && info && (
             <motion.div
               key={selected.id + "-info"}
-              className="absolute inset-x-0 z-10 pl-[4.5rem] pr-6 max-md:pl-4 max-md:pr-4"
-              style={{ top: infoTop }}
+              className="absolute z-10 pr-6 max-md:pr-3"
+              style={{ top: infoAnchor.top, left: infoAnchor.left }}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0, transition: { duration: 0.22, ease: "easeOut" } }}
               exit={{ opacity: 0, y: 8, transition: { duration: 0.14, ease: "easeIn" } }}
@@ -178,7 +195,7 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
                   Open folder
                 </button>
               </div>
-              <p className="mt-3 max-w-prose text-sm leading-relaxed text-text/85">
+              <p className="mt-3 max-w-prose text-sm leading-relaxed text-text/85 max-md:max-w-[calc(100vw-10.5rem)]">
                 {selected.description.trim() ||
                   (selected.demo
                     ? "Sample art only, nothing launches."

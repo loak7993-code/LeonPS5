@@ -2,12 +2,10 @@ import argparse
 import os
 import shutil
 import stat
-import struct
 import subprocess
 import sys
 import tempfile
 import urllib.request
-import zipfile
 from pathlib import Path
 
 LAUNCHER_DIR = Path(__file__).resolve().parent / "launcher"
@@ -17,6 +15,23 @@ APPIMAGE_TOOL_URL = (
     "https://github.com/AppImage/AppImageKit/releases/download/continuous/"
     "appimagetool-x86_64.AppImage"
 )
+_LAUNCHER_ROOT = str(Path(__file__).resolve().parent / "launcher")
+if _LAUNCHER_ROOT not in sys.path:
+    sys.path.insert(0, _LAUNCHER_ROOT)
+
+from brand import ICON_512_PNG_BASE64, ICON_ICO_BASE64  # noqa: E402
+
+
+def write_brand_icon(path):
+    import base64
+
+    Path(path).write_bytes(base64.b64decode(ICON_512_PNG_BASE64))
+
+
+def write_brand_ico(path):
+    import base64
+
+    Path(path).write_bytes(base64.b64decode(ICON_ICO_BASE64))
 
 
 def check_dist():
@@ -25,127 +40,131 @@ def check_dist():
         raise RuntimeError(f"UI build missing: {index}. Run npm run build in {WEB_DIR} first.")
 
 
-def require_web_source():
-    if not (WEB_DIR / "package.json").is_file():
-        raise RuntimeError(f"Web source missing: {WEB_DIR}")
+def package_windows(version, output):
+    check_dist()
+    build_root = Path(tempfile.mkdtemp(prefix="leonps5-launcher-windows-"))
+    try:
+        server_source = LAUNCHER_DIR / "server.py"
+        data_dir = DIST_DIR
+        icon_path = build_root / "brand.ico"
+        write_brand_ico(icon_path)
+        spec = build_root / "launcher.spec"
+        spec.write_text(
+            "\n".join(
+                [
+                    "# -*- mode: python ; coding: utf-8 -*-",
+                    "a = Analysis(",
+                    f"    [r'{server_source}'],",
+                    "    pathex=[],",
+                    f"    datas=[(r'{data_dir}', 'dist')],",
+                    "    hiddenimports=[],",
+                    "    excludes=['tkinter'],",
+                    ")",
+                    "pyz = PYZ(a.pure)",
+                    "exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name='launcher', console=False, upx=False, icon=r'" + str(icon_path) + "')",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        command = [
+            sys.executable,
+            "-m",
+            "PyInstaller",
+            "--noconfirm",
+            "--clean",
+            "--distpath",
+            str(build_root / "out"),
+            "--workpath",
+            str(build_root / "work"),
+            str(spec),
+        ]
+        subprocess.run(command, check=True)
+        binary_name = "launcher.exe" if os.name == "nt" else "launcher"
+        binary = build_root / "out" / binary_name
+        if not binary.is_file() or binary.stat().st_size == 0:
+            raise RuntimeError("PyInstaller did not produce the launcher executable")
+        if os.name == "nt":
+            target = output / f"launcher-windows-{version}.exe"
+            shutil.copy2(binary, target)
+            print(f"Windows exe: {target}")
+        else:
+            staged = output / f"launcher-{version}"
+            shutil.copy2(binary, staged)
+            staged.chmod(staged.stat().st_mode | stat.S_IEXEC)
+            print(f"Host binary for verification: {staged}")
+    finally:
+        shutil.rmtree(build_root, ignore_errors=True)
 
 
-ACCENT = (47, 107, 255)
-TEAL = (63, 169, 201)
-NAVY_TOP = (18, 34, 94)
-NAVY_MID = (10, 19, 56)
-NAVY_END = (7, 11, 28)
-WAVE_INK = (244, 246, 255)
-
-
-def lerp(a, b, t):
-    return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
-
-
-def bezier(p0, p1, p2, p3, steps=48):
-    points = []
-    for index in range(steps + 1):
-        t = index / steps
-        u = 1 - t
-        x = u * u * u * p0[0] + 3 * u * u * t * p1[0] + 3 * u * t * t * p2[0] + t * t * t * p3[0]
-        y = u * u * u * p0[1] + 3 * u * u * t * p1[1] + 3 * u * t * t * p2[1] + t * t * t * p3[1]
-        points.append((x, y))
-    return points
-
-
-def stroke_canvas(size, points, radius, alpha):
-    canvas = bytearray(size * size)
-    scale = size / 512.0
-    mapped = [(x * scale, y * scale) for x, y in points]
-
-    def paint_circle(cx, cy, r, a):
-        for y in range(max(0, int(cy - r)), min(size, int(cy + r) + 1)):
-            inner = r * r - (y - cy) ** 2
-            span = inner ** 0.5 if inner > 0 else 0.0
-            base = y * size
-            for x in range(max(0, int(cx - span)), min(size, int(cx + span) + 1)):
-                canvas[base + x] = a
-
-    def paint_segment(a, b, r, a_level):
-        dx, dy = b[0] - a[0], b[1] - a[1]
-        length = (dx * dx + dy * dy) ** 0.5 or 1.0
-        steps = int(length) + 2
-        for index in range(steps + 1):
-            t = index / steps
-            paint_circle(a[0] + dx * t, a[1] + dy * t, r, a_level)
-
-    half = 19 * scale
-    paint_circle(mapped[0][0], mapped[0][1], half, alpha)
-    for first, second in zip(mapped, mapped[1:]):
-        paint_segment(first, second, half, alpha)
-    return canvas
-
-
-def blend_over(base, layer, value, alpha):
-    return tuple(
-        int(base[i] + (value[i] - base[i]) * (alpha / 255)) for i in range(3)
-    )
-
-
-def write_png(path, size):
-    import zlib
-
-    def chunk(tag, data):
-        body = tag + data
-        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF)
-
-    row_padding = (4 - (size * 3) % 4) % 4
-    raw = bytearray()
-    glyph = stroke_canvas(size, GLYPH_STROKE, 19, 255)
-    wave_a = stroke_canvas(size, WAVE_A, 3, 204)
-    wave_b = stroke_canvas(size, WAVE_B, 2, 110)
-    radius = size // 5
-    for y in range(size):
-        raw.append(0)
-        for x in range(size):
-            in_corner = (x < radius and y < radius and (radius - x) ** 2 + (radius - y) ** 2 > radius ** 2)
-            in_corner = in_corner or (
-                x >= size - radius and y < radius and (x - (size - radius - 1)) ** 2 + (radius - y) ** 2 > radius ** 2
+def package_linux(version, output):
+    check_dist()
+    build_root = Path(tempfile.mkdtemp(prefix="leonps5-launcher-linux-"))
+    try:
+        appdir = build_root / "LeonPS5.AppDir"
+        try:
+            payload = appdir / "usr" / "lib" / "leonps5"
+            payload.mkdir(parents=True)
+            shutil.copy2(LAUNCHER_DIR / "server.py", payload / "server.py")
+            shutil.copy2(LAUNCHER_DIR / "brand.py", payload / "brand.py")
+            shutil.copytree(DIST_DIR, payload / "web" / "dist")
+            docs = Path("docs/user")
+            for document in sorted(docs.glob("*.md")):
+                shutil.copy2(document, payload / document.name)
+            readme = LAUNCHER_DIR / "README.md"
+            if readme.is_file():
+                shutil.copy2(readme, payload / "README.md")
+            icon_dir = appdir / "usr" / "share" / "icons"
+            icon_dir.mkdir(parents=True, exist_ok=True)
+            write_brand_icon(icon_dir / "leonps5.png")
+            icon = appdir / "leonps5.png"
+            write_brand_icon(icon)
+            (appdir / "leonps5.desktop").write_text(
+                "\n".join(
+                    [
+                        "[Desktop Entry]",
+                        "Type=Application",
+                        "Name=LeonPS5 Launcher",
+                        "Comment=Home screen for the LeonPS5 project",
+                        "Exec=AppRun",
+                        "Icon=leonps5",
+                        "Categories=Game;Emulator;",
+                        "Terminal=false",
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
             )
-            index = y * size + x
-            t = (x + y) / (2.0 * size)
-            if t < 0.5:
-                color = lerp(NAVY_TOP, NAVY_MID, t * 2)
-            else:
-                color = lerp(NAVY_MID, NAVY_END, (t - 0.5) * 2)
-            hx, hy = (x - size * 0.18) / size, (y - size * 0.10) / size
-            haze = max(0.0, 1.0 - (hx * hx + hy * hy) ** 0.5 / 0.9)
-            if haze > 0:
-                haze = haze ** 1.6 * 0.42
-                color = blend_over(color, ACCENT, ACCENT, int(haze * 255))
-            if wave_a[index]:
-                color = blend_over(color, ACCENT, ACCENT, 225)
-            if wave_b[index]:
-                color = blend_over(color, TEAL, TEAL, 140)
-            if glyph[index]:
-                color = (233, 237, 252)
-            if in_corner and not glyph[index]:
-                color = (7, 10, 27)
-            raw += bytes(color)
-        raw += b"\x00" * row_padding
-
-    header = struct.pack(">IIBBBBB", size, size, 8, 2, 0, 0, 0)
-    content = (
-        b"\x89PNG\r\n\x1a\n"
-        + chunk(b"IHDR", header)
-        + chunk(b"IDAT", zlib.compress(bytes(raw), 9))
-        + chunk(b"IEND", b"")
-    )
-    Path(path).write_bytes(content)
-
-
-GLYPH_STROKE = [
-    (150, 108), (150, 366), (255, 366),
-    (255, 366), (255, 108),
-    (412, 108), (258, 108), (258, 244), (412, 244), (412, 366), (258, 366),
-]
-WAVE_A = bezier((-20, 330), (120, 260), (220, 400), (380, 310)) + bezier((380, 310), (540, 220), (520, 250), (540, 290))[1:]
-WAVE_B = bezier((-20, 380), (130, 320), (240, 450), (400, 365)) + bezier((400, 365), (560, 280), (520, 320), (540, 345))[1:]
+            apprun = appdir / "AppRun"
+            apprun.write_text(
+                "\n".join(
+                    [
+                        "#!/bin/sh",
+                        'APPDIR=$(dirname "$(readlink -f "$0")")',
+                        'exec python3 "$APPDIR/usr/lib/leonps5/server.py" \\',
+                        '  --web-dir "$APPDIR/usr/lib/leonps5/web/dist" \\',
+                        '  --games-dir "${LEONPS5_GAMES_DIR:-$HOME/Games/LeonPS5}" \\',
+                        '  --open "$@"',
+                    ]
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            apprun.chmod(apprun.stat().st_mode | stat.S_IEXEC)
+            tool = build_root / "appimagetool.AppImage"
+            if not tool.is_file():
+                urllib.request.urlretrieve(APPIMAGE_TOOL_URL, tool)
+            tool.chmod(tool.stat().st_mode | stat.S_IEXEC)
+            target = (output / f"launcher-linux-{version}.AppImage").resolve()
+            subprocess.run(
+                [str(tool), "--appimage-extract-and-run", str(appdir.resolve()), str(target), "-n"],
+                check=True,
+            )
+            target.chmod(target.stat().st_mode | stat.S_IEXEC)
+            print(f"AppImage: {target}")
+        finally:
+            pass
+    finally:
+        shutil.rmtree(build_root, ignore_errors=True)
 
 
 def main():

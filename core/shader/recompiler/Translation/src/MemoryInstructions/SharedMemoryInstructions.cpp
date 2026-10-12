@@ -46,9 +46,6 @@ bool TranslationContext::dsAtomic(const RdnaInstruction& inst, IrOpcode opcode, 
 bool TranslationContext::dsWrxchg2(const RdnaInstruction& inst) {
     MemoryInfo first = sharedMemoryInfoFromInstruction(inst);
     const std::uint32_t width = first.dataDwords / 2u;
-    if (width == 2u && inst.gds) {
-        throw std::runtime_error("64-bit GDS atomics are not supported");
-    }
     first.dataDwords = width;
     first.componentCount = width;
     MemoryInfo second = first;
@@ -196,9 +193,6 @@ bool TranslationContext::dsWrite2(const RdnaInstruction& inst) {
 }
 
 bool TranslationContext::dsSrc2(const RdnaInstruction& inst, IrOpcode opcode) {
-    if (inst.gds) {
-        throw std::runtime_error("GDS src2 operations are not supported");
-    }
     const MemoryInfo memory = sharedMemoryInfoFromInstruction(inst);
     const IrU32 address = readU32(inst.source0);
     MemoryInfo source = memory;
@@ -240,9 +234,6 @@ bool TranslationContext::dsAtomic2(const RdnaInstruction& inst, IrOpcode opcode,
 }
 
 bool TranslationContext::dsAtomic64(const RdnaInstruction& inst, IrOpcode opcode, bool returnsValue) {
-    if (inst.gds) {
-        throw std::runtime_error("64-bit GDS atomics are not supported");
-    }
     MemoryInfo memory = sharedMemoryInfoFromInstruction(inst);
     memory.flushDenormals = sharedFloatFlush(opcode);
     const IrU32 address = readU32(inst.source0);
@@ -260,9 +251,6 @@ bool TranslationContext::dsAtomic64(const RdnaInstruction& inst, IrOpcode opcode
 }
 
 bool TranslationContext::dsCondxchg32(const RdnaInstruction& inst) {
-    if (inst.gds) {
-        throw std::runtime_error("DS conditional exchange GDS mode is not supported");
-    }
     MemoryInfo memory = sharedMemoryInfoFromInstruction(inst);
     memory.dataDwords = 1u;
     memory.componentCount = 1u;

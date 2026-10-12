@@ -340,8 +340,7 @@ SpirvRequirements AnalyzeProgramRequirements(const IrProgram& program) {
             const auto sharedAccess = SharedAccessOf(inst->Opcode());
             if (sharedAccess == SharedAccess::Atomic && inst->Type() == IrType::U64) {
                 requirements.sharedInt64Atomics = true;
-            }
-            if (sharedAccess != SharedAccess::None) {
+            }            if (sharedAccess != SharedAccess::None) {
                 const auto index = inst->Flags<MemoryFlags>().index;
                 if (index >= program.Resources().memoryInfo.size()) {
                     throw std::runtime_error("shared operation has invalid memory metadata");
@@ -349,6 +348,9 @@ SpirvRequirements AnalyzeProgramRequirements(const IrProgram& program) {
                 const auto kind = program.Resources().memoryInfo.at(index).kind;
                 if (kind != ResourceKind::Lds && kind != ResourceKind::Gds) {
                     throw std::runtime_error("shared operation has invalid resource kind");
+                }
+                if (sharedAccess == SharedAccess::Atomic && inst->Type() == IrType::U64 && kind == ResourceKind::Gds) {
+                    requirements.gdsInt64Atomics = true;
                 }
                 if (program.Resources().stage != IrShaderStage::Compute && program.Resources().stage != IrShaderStage::Mesh && kind == ResourceKind::Lds) {
                     requirements.functionLds = true;

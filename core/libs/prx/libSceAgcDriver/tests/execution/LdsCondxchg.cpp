@@ -89,10 +89,22 @@ void CheckRejections(AgcDriver::VulkanDevice& device) {
     ExpectError([&] { translate(std::span(boundary).first(1u)); }, "truncated DS instruction");
     constexpr std::array<std::uint32_t, 3> sourceOverflow{0xd9f80000u, 0x0200ff00u, 0xbf810000u};
     constexpr std::array<std::uint32_t, 3> destinationOverflow{0xd9f80000u, 0xff000400u, 0xbf810000u};
-    constexpr std::array<std::uint32_t, 3> gds{0xd9fa0000u, 0x02000400u, 0xbf810000u};
     ExpectError([&] { translate(sourceOverflow); }, "DS conditional exchange source register range overflow");
     ExpectError([&] { translate(destinationOverflow); }, "DS conditional exchange destination register range overflow");
-    ExpectError([&] { translate(gds); }, "DS conditional exchange GDS mode is not supported");
+    constexpr std::array<std::uint32_t, 3> gds{0xd9fa0000u, 0x02000400u, 0xbf810000u};
+    bool namedGds = false;
+    Translate(gds, 32u, device.Target(), [&](const auto& result) {
+        const auto& words = result.spirv.Words();
+        for (std::size_t offset = 5u; offset < words.size();) {
+            const auto count = words[offset] >> 16u;
+            if ((words[offset] & 0xffffu) == 5u && count >= 3u) {
+                const auto name = std::string(reinterpret_cast<const char*>(&words[offset + 2u]));
+                namedGds = namedGds || name == "gds";
+            }
+            offset += count;
+        }
+    });
+    Require(namedGds, "lds condxchg: the GDS conditional exchange did not bind the GDS buffer");
 }
 
 void Fill(std::uint32_t threads, std::uint32_t offset, bool contended) {

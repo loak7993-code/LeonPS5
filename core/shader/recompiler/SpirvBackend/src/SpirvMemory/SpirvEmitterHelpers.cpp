@@ -410,6 +410,9 @@ void DefineDescriptors(SpirvEmitterState& state) {
             break;
         case DescriptorBindingKind::Gds:
             state.gdsVariable = Define(StorageBufferBlockType(state), "gds");
+            if (state.requirements.gdsInt64Atomics) {
+                state.module.AddAnnotation(spv::OpDecorate, state.gdsVariable, spv::DecorationAliased);
+            }
             break;
         default: {
             if (ImageBindingResourceClass(binding.kind) == ImageResourceClass::None) {

@@ -25,6 +25,7 @@ struct SpirvRequirements {
     bool bufferInt64Atomics = false;
     bool imageInt64Atomics = false;
     bool sharedInt64Atomics = false;
+    bool gdsInt64Atomics = false;
     bool float64 = false;
     bool coherentBuffers = false;
     std::vector<std::uint32_t> capabilities;

@@ -416,42 +416,52 @@ std::uint32_t SpirvAtomicOpcode(IrOpcode opcode) {
     case IrOpcode::BufferAtomicSwap32:
     case IrOpcode::BufferAtomicSwap64:
     case IrOpcode::SharedAtomicSwap32:
+    case IrOpcode::SharedAtomicSwap64:
         return spv::OpAtomicExchange;
     case IrOpcode::BufferAtomicIAdd32:
     case IrOpcode::SharedAtomicIAdd32:
     case IrOpcode::BufferAtomicIAdd64:
+    case IrOpcode::SharedAtomicIAdd64:
         return spv::OpAtomicIAdd;
     case IrOpcode::BufferAtomicISub32:
     case IrOpcode::SharedAtomicISub32:
     case IrOpcode::BufferAtomicISub64:
+    case IrOpcode::SharedAtomicISub64:
         return spv::OpAtomicISub;
     case IrOpcode::BufferAtomicSMin32:
     case IrOpcode::SharedAtomicSMin32:
     case IrOpcode::BufferAtomicSMin64:
+    case IrOpcode::SharedAtomicSMin64:
         return spv::OpAtomicSMin;
     case IrOpcode::BufferAtomicUMin32:
     case IrOpcode::SharedAtomicUMin32:
     case IrOpcode::BufferAtomicUMin64:
+    case IrOpcode::SharedAtomicUMin64:
         return spv::OpAtomicUMin;
     case IrOpcode::BufferAtomicSMax32:
     case IrOpcode::SharedAtomicSMax32:
     case IrOpcode::BufferAtomicSMax64:
+    case IrOpcode::SharedAtomicSMax64:
         return spv::OpAtomicSMax;
     case IrOpcode::BufferAtomicUMax32:
     case IrOpcode::SharedAtomicUMax32:
     case IrOpcode::BufferAtomicUMax64:
+    case IrOpcode::SharedAtomicUMax64:
         return spv::OpAtomicUMax;
     case IrOpcode::BufferAtomicAnd32:
     case IrOpcode::SharedAtomicAnd32:
     case IrOpcode::BufferAtomicAnd64:
+    case IrOpcode::SharedAtomicAnd64:
         return spv::OpAtomicAnd;
     case IrOpcode::BufferAtomicOr32:
     case IrOpcode::BufferAtomicOr64:
     case IrOpcode::SharedAtomicOr32:
+    case IrOpcode::SharedAtomicOr64:
         return spv::OpAtomicOr;
     case IrOpcode::BufferAtomicXor32:
     case IrOpcode::SharedAtomicXor32:
     case IrOpcode::BufferAtomicXor64:
+    case IrOpcode::SharedAtomicXor64:
         return spv::OpAtomicXor;
     default:
         throw std::runtime_error("SpirvAtomicOpcode: opcode has no SPIR-V atomic instruction");
@@ -914,9 +924,55 @@ std::uint32_t LockedLdsUpdate(SpirvEmitterState& state, TUpdate&& update) {
 }
 
 template<typename TReplacement>
+std::uint32_t EmitGdsAtomic64(SpirvValueEmitContext& ctx, const IrValue& inst, TReplacement&& replacement) {
+    auto& state = ctx.state;
+    const auto& mem = SharedMemory(ctx, inst);
+    return EmitValueOrDefaultIfCondition(state, ActiveArgument(ctx, inst), TypeU64(state), ConstantU64(state, 0u), [&]() {
+        const auto resource = PrepareMemoryResourceAccess(state, mem);
+        const auto rawIndex = DwordIndex(ctx, inst, mem);
+        const auto high = EmitMemoryElementIndex(state, resource, Binary(state, spv::OpIAdd, TypeU32(state), rawIndex, ConstantU32(state, 1u)));
+        return EmitValueOrDefaultIfCondition(state, EmitMemoryElementInBounds(state, resource, high), TypeU64(state), ConstantU64(state, 0u), [&]() {
+            const auto wordPointer = EmitMemoryElementPointer(state, resource, rawIndex);
+            const auto pointer = Unary(state, spv::OpBitcast, TypeStorageBufferU64ElementPointer(state), wordPointer);
+            switch (inst.Opcode()) {
+            case IrOpcode::SharedAtomicIAdd64:
+            case IrOpcode::SharedAtomicISub64:
+            case IrOpcode::SharedAtomicSMin64:
+            case IrOpcode::SharedAtomicUMin64:
+            case IrOpcode::SharedAtomicSMax64:
+            case IrOpcode::SharedAtomicUMax64:
+            case IrOpcode::SharedAtomicAnd64:
+            case IrOpcode::SharedAtomicOr64:
+            case IrOpcode::SharedAtomicXor64:
+            case IrOpcode::SharedAtomicSwap64: {
+                const auto value = ScalarU64Argument(ctx, inst, 2u);
+                const auto old = state.module.AllocateId();
+                state.module.AddFunction(SpirvAtomicOpcode(inst.Opcode()), TypeScalarU64(state), old, pointer, ConstantU32(state, spv::ScopeDevice), ConstantU32(state, spv::MemorySemanticsMaskNone), value);
+                EmitDeviceAtomicMemoryBarrier(state);
+                return Unary(state, spv::OpBitcast, TypeU64(state), old);
+            }
+            case IrOpcode::SharedAtomicCmpst64: {
+                const auto desired = ScalarU64Argument(ctx, inst, 3u);
+                const auto comparator = ScalarU64Argument(ctx, inst, 2u);
+                const auto old = state.module.AllocateId();
+                state.module.AddFunction(spv::OpAtomicCompareExchange, TypeScalarU64(state), old, pointer, ConstantU32(state, spv::ScopeDevice), ConstantU32(state, spv::MemorySemanticsMaskNone), ConstantU32(state, spv::MemorySemanticsMaskNone), desired, comparator);
+                EmitDeviceAtomicMemoryBarrier(state);
+                return Unary(state, spv::OpBitcast, TypeU64(state), old);
+            }
+            default:
+                return Unary(state, spv::OpBitcast, TypeU64(state), AtomicUpdateTyped(state, pointer, ResourceKind::Gds, TypeScalarU64(state), [&](std::uint32_t observed) { return replacement(state, observed); }));
+            }
+        });
+    });
+}
+
+template<typename TReplacement>
 std::uint32_t SharedAtomic64(SpirvValueEmitContext& ctx, const IrValue& inst, TReplacement&& replacement) {
     auto& state = ctx.state;
     const auto& mem = SharedMemory(ctx, inst);
+    if (mem.kind == ResourceKind::Gds) {
+        return EmitGdsAtomic64(ctx, inst, std::forward<TReplacement>(replacement));
+    }
     return EmitValueOrDefaultIfCondition(state, ActiveArgument(ctx, inst), TypeU64(state), ConstantU64(state, 0u), [&]() {
         const auto resource = PrepareMemoryResourceAccess(state, mem);
         const auto rawIndex = DwordIndex(ctx, inst, mem);

@@ -86,7 +86,7 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
   const titleX = Math.min(LEAD + index * step, LEAD * 2);
 
   return (
-    <section aria-label="Game rail" className="relative min-h-0 flex-1">
+    <section aria-label="Game rail" className="relative min-h-0 flex-1 overflow-x-clip">
       <div className="relative z-10 h-full">
         <AnimatePresence mode="wait">
           {selected && !searching && (

@@ -130,9 +130,26 @@ def demo_games():
             "hasIcon": False,
             "lastPlayed": None,
             "demo": True,
+            "description": f"Sample title {position + 1} of {len(DEMO_TITLES)}. Sample art only, nothing launches.",
         }
         for position, title in enumerate(DEMO_TITLES)
     ]
+
+
+def read_description(folder):
+    for name in ("README.txt", "description.txt"):
+        candidate = folder / name
+        try:
+            text = candidate.read_text(encoding="utf-8")
+        except (OSError, ValueError):
+            continue
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        if lines:
+            joined = " ".join(lines)[:300]
+            if len(joined) == 300 and " " in joined:
+                joined = joined.rsplit(" ", 1)[0]
+            return joined
+    return ""
 
 
 def open_folder(directory):
@@ -223,6 +240,7 @@ class Library:
                     "hasIcon": (entry / "sce_sys" / "icon0.png").is_file(),
                     "lastPlayed": self.played.get(entry.name),
                     "demo": False,
+                    "description": read_description(entry),
                 }
             )
         with self.lock:

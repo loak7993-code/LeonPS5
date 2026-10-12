@@ -31,10 +31,12 @@ def tiny_png(rgb):
     )
 
 
-def make_game(root, name, title, icon=False, marker="sce_module"):
+def make_game(root, name, title, icon=False, marker="sce_module", readme=None):
     folder = root / name
     (folder / marker).mkdir(parents=True, exist_ok=True)
     (folder / marker / "stub.txt").write_text("fixture\n", encoding="utf-8")
+    if readme is not None:
+        (folder / "README.txt").write_text(readme, encoding="utf-8")
     (folder / "sce_sys").mkdir(exist_ok=True)
     (folder / "sce_sys" / "param.json").write_text(
         json.dumps({"localizedParameters": {"default": {"TITLE": title}}}), encoding="utf-8"
@@ -90,7 +92,7 @@ class ServerTests(unittest.TestCase):
         server.config_path = lambda: self.root / "config.json"
         self.games = self.root / "games"
         self.games.mkdir()
-        make_game(self.games, "alpha", "Alpha Strike", icon=True)
+        make_game(self.games, "alpha", "Alpha Strike", icon=True, readme="Alpha readme line one.\n\nAlpha readme line two.\n")
         make_game(self.games, "beta", "Beta Line", marker="prx")
         self.config_backup = (server.load_config, server.save_config)
         server.load_config = lambda: {"gamesDir": None, "extraArgs": []}
@@ -115,6 +117,17 @@ class ServerTests(unittest.TestCase):
         self.assertFalse(alpha["demo"])
         self.assertIsNone(alpha["lastPlayed"])
         self.assertIn("version", payload)
+        self.assertEqual(alpha["description"], "Alpha readme line one. Alpha readme line two.")
+        beta = next(item for item in payload["games"] if item["id"] == "beta")
+        self.assertEqual(beta["description"], "")
+
+    def test_description_caps_long_readme(self):
+        folder = make_game(self.games, "gamma", "Gamma Wave", readme="word " * 200)
+        status, payload = self.spawn().get("/api/games")
+        self.assertEqual(status, 200)
+        gamma = next(item for item in payload["games"] if item["id"] == "gamma")
+        self.assertEqual(len(gamma["description"]), 299)
+        self.assertTrue(gamma["description"].endswith("word"))
 
     def test_demo_payload_replaces_games(self):
         fixture = self.spawn()

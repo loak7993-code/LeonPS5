@@ -4,7 +4,7 @@ import { Button } from "./ui/Button";
 import { Skeleton, SkeletonRegion } from "./ui/Skeleton";
 import { ToastProvider, useToast } from "./ui/Toaster";
 import * as api from "./api";
-import type { Game } from "./api";
+import { iconUrl, type Game } from "./api";
 import { useLauncherData } from "./state/useLauncherData";
 import { useLibraryFilter } from "./state/useLibraryFilter";
 import { useLauncherNav } from "./state/useLauncherNav";
@@ -16,6 +16,8 @@ import { Rail } from "./Row";
 import { BottomBar } from "./BottomBar";
 import { EmptyState } from "./EmptyState";
 import { LaunchOverlay, StoppedScreen } from "./LaunchOverlay";
+import { GamePage } from "./sheets/GamePage";
+import { useGameTint } from "./gameTint";
 import { SettingsPage } from "./sheets/Settings";
 import { GridSheet } from "./sheets/LibraryGrid";
 import { AboutSheet, PowerSheet } from "./sheets/AboutPower";
@@ -53,6 +55,14 @@ function ServerError({ error, onRetry }: { error: string; onRetry: () => void })
   );
 }
 
+function hexAlpha(hex: string, alpha: number): string {
+  const value = Number.parseInt(hex.slice(1), 16);
+  const red = (value >> 16) & 0xff;
+  const green = (value >> 8) & 0xff;
+  const blue = value & 0xff;
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`;
+}
+
 export default function App() {
   return (
     <ToastProvider>
@@ -66,12 +76,16 @@ function Launcher() {
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [gridIndex, setGridIndex] = useState(0);
   const [stopped, setStopped] = useState(false);
+  const [gamePage, setGamePage] = useState<Game | null>(null);
+  const [tint, applyTint] = useGameTint();
   const [onboarding, setOnboarding] = useState(
     () => window.localStorage.getItem("leonps5-onboarded") !== "done",
   );
   const [prefs, setPref] = usePrefs();
   const [gestured, setGestured] = useState(false);
   const glow = (prefs.accentGlow ? (prefs.glowIntensity / 100) * 0.14 : 0);
+  const glowColorA = tint ?? "#2f6bff";
+  const glowColorB = tint ?? "#3fa9c9";
   const waveOp = prefs.waveOpacity / 100;
   const { toast } = useToast();
   const searchRef = useRef<HTMLInputElement>(null);
@@ -125,15 +139,29 @@ function Launcher() {
 
   const flow = useLaunchFlow(demo, apply, useCallback(() => undefined, []), describeNetworkError);
 
-  const activate = useCallback(
+  const activate = useCallback((game: Game) => {
+    pageOpenedAt.current = Date.now();
+    setGamePage(game);
+    applyTint(game.hasIcon ? iconUrl(game.id) : null);
+  }, [applyTint]);
+
+  const pageOpenedAt = useRef(0);
+  const closeGamePage = useCallback(() => {
+    setGamePage(null);
+    pageOpenedAt.current = 0;
+    applyTint(null);
+  }, [applyTint]);
+
+  const playFromPage = useCallback(
     (game: Game) => {
       if (game.demo) {
         toast("Demo titles are samples and do not launch");
         return;
       }
+      closeGamePage();
       flow.start(game);
     },
-    [flow, toast],
+    [closeGamePage, flow, toast],
   );
 
   const [searching, setSearching] = useState(false);
@@ -200,7 +228,7 @@ function Launcher() {
     anchorRef.current = null;
   }, [filtered, nav]);
 
-  const blocked = overlay !== null || flow.launch !== null;
+  const blocked = overlay !== null || flow.launch !== null || gamePage !== null;
 
   useGamepad(
     {
@@ -217,6 +245,13 @@ function Launcher() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
       if (event.target instanceof HTMLInputElement) return;
+      if (gamePage !== null) {
+        if (event.key === "Escape") closeGamePage();
+        else if (event.key === "Enter" && Date.now() - pageOpenedAt.current > 300) playFromPage(gamePage);
+        else return;
+        event.preventDefault();
+        return;
+      }
       if (blocked) {
         if (flow.launch && event.key === "Escape") flow.close();
         return;
@@ -232,7 +267,7 @@ function Launcher() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [blocked, searching, flow.launch, flow]);
+  }, [blocked, gamePage, closeGamePage, playFromPage, searching, flow.launch, flow]);
 
   if (window.location.pathname === "/gallery") {
     return (
@@ -261,7 +296,7 @@ function Launcher() {
           position: "fixed",
           inset: 0,
           pointerEvents: "none",
-          background: `radial-gradient(48vw 36vw at -6% -10%, rgba(47,107,255,${glow}), transparent 70%), radial-gradient(52vw 40vw at 106% 108%, rgba(63,169,201,${glow * 0.65}), transparent 70%)`,
+          background: `radial-gradient(48vw 36vw at -6% -10%, ${hexAlpha(glowColorA, glow)}, transparent 70%), radial-gradient(52vw 40vw at 106% 108%, ${hexAlpha(glowColorB, glow * 0.65)}, transparent 70%)`,
           zIndex: 0,
         }}
       />
@@ -351,6 +386,14 @@ function Launcher() {
           onSaveDir={saveDir}
           prefs={prefs}
           onPref={setPref}
+        />
+      )}
+      {gamePage !== null && (
+        <GamePage
+          game={gamePage}
+          onClose={closeGamePage}
+          onPlay={playFromPage}
+          onOpenFolder={openFolder}
         />
       )}
       {overlay === "about" && (

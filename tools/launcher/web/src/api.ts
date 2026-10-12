@@ -5,6 +5,7 @@ export type Game = {
   hasIcon: boolean;
   lastPlayed: string | null;
   demo: boolean;
+  description: string;
 };
 
 export type Library = {

@@ -109,46 +109,54 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
                   ? "Demo title · samples only, nothing launches"
                   : `${selected.folder} · ${relativeTime(selected.lastPlayed)}`}
               </p>
-              {info && (
-                <div className="max-md:max-w-[calc(100vw-5.5rem)]">
-                  <div className="mt-4 flex flex-wrap items-center gap-3">
-                    {selected.demo ? (
-                      <div className="inline-flex h-12 items-center rounded-xl bg-white/5 px-5 text-sm text-muted">
-                        Sample titles do not launch
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => onPlay?.(selected)}
-                        className="inline-flex h-12 items-center gap-2.5 rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-transform hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                      >
-                        <Play size={18} weight="bold" />
-                        Play
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => onOpenFolder?.()}
-                      className="inline-flex h-12 items-center gap-2 rounded-xl border border-line px-5 text-sm text-text transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                    >
-                      <FolderOpen size={16} weight="bold" />
-                      Open folder
-                    </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <AnimatePresence>
+          {selected && !searching && info && (
+            <motion.div
+              key={selected.id + "-info"}
+              className="absolute inset-x-0 bottom-0 z-10 pl-[4.5rem] pr-6 max-md:pl-4 max-md:pr-4"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0, transition: { duration: 0.22, ease: "easeOut" } }}
+              exit={{ opacity: 0, y: 8, transition: { duration: 0.14, ease: "easeIn" } }}
+            >
+              <div className="flex flex-wrap items-center gap-3">
+                {selected.demo ? (
+                  <div className="inline-flex h-12 items-center rounded-xl bg-white/5 px-5 text-sm text-muted">
+                    Sample titles do not launch
                   </div>
-                  <p className="mt-4 max-w-prose text-sm leading-relaxed text-text/85">
-                    {selected.description.trim() ||
-                      (selected.demo
-                        ? "Sample art only, nothing launches."
-                        : "No description yet. Add a README.txt or description.txt to the game folder and rescan.")}
-                  </p>
-                </div>
-              )}
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onPlay?.(selected)}
+                    className="inline-flex h-12 items-center gap-2.5 rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-transform hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                  >
+                    <Play size={18} weight="bold" />
+                    Play
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onOpenFolder?.()}
+                  className="inline-flex h-12 items-center gap-2 rounded-xl border border-line px-5 text-sm text-text transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                >
+                  <FolderOpen size={16} weight="bold" />
+                  Open folder
+                </button>
+              </div>
+              <p className="mt-3 max-w-prose text-sm leading-relaxed text-text/85">
+                {selected.description.trim() ||
+                  (selected.demo
+                    ? "Sample art only, nothing launches."
+                    : "No description yet. Add a README.txt or description.txt to the game folder and rescan.")}
+              </p>
             </motion.div>
           )}
         </AnimatePresence>
         <div
-          className={`absolute inset-x-0 bottom-4 overflow-hidden transition-[top] duration-200 ease-out ${
-            info ? "top-56 max-md:top-72" : "top-24 max-md:top-20"
+          className={`absolute inset-x-0 overflow-hidden transition-all duration-200 ease-out ${
+            info ? "top-24 bottom-[12.5rem] max-md:top-20 max-md:bottom-[14rem]" : "top-24 bottom-4 max-md:top-20 max-md:bottom-3"
           }`}
         >
           {games.length > 0 ? (

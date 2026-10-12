@@ -9,6 +9,7 @@ export type Prefs = {
   cardSize: CardSize;
   motion: "full" | "reduced";
   backdrop: boolean;
+  music: boolean;
 };
 
 const KEY = "leonps5-launcher-prefs";
@@ -32,6 +33,7 @@ const DEFAULTS: Prefs = {
   cardSize: "medium",
   motion: "full",
   backdrop: true,
+  music: true,
 };
 
 function read(): Prefs {
@@ -47,6 +49,7 @@ function read(): Prefs {
         cardSize !== undefined && cardSize in CARD_WIDTH ? (cardSize as CardSize) : DEFAULTS.cardSize,
       motion: parsed.motion === "reduced" ? "reduced" : "full",
       backdrop: parsed.backdrop !== false,
+      music: parsed.music !== false,
     };
   } catch {
     return DEFAULTS;

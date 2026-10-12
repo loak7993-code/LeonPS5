@@ -23,7 +23,7 @@ export type NavigationState = {
   handlers: React.RefObject<NavHandlers>;
 };
 
-const TOP_COUNT = 5;
+const TOP_COUNT = 6;
 const BOTTOM_COUNT = 4;
 const NO_NAV: NavHandlers = {
   left() {},

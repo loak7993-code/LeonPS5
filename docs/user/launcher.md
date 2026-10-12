@@ -74,6 +74,14 @@ loading state, dialog, toast, skeleton and progress bar is shown there with its
 accessibility notes. The implementation guide lives in
 [docs/dev/LauncherUI.md](../dev/LauncherUI.md).
 
+## Background music
+
+The launcher plays quiet generative ambient music on the home screen, in the
+style of a console dashboard. It starts after your first interaction (browser
+autoplay rules), fades out while a title is starting and comes back when you
+return. Toggle it with the Music button in the top bar or the Ambient music
+switch in Settings; the preference is remembered.
+
 ## Customization
 
 Settings applies instantly and remembers itself in the browser:

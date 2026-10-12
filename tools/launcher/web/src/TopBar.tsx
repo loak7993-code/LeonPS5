@@ -1,4 +1,4 @@
-import { MagnifyingGlass, SquaresFour, GearSix, Power } from "@phosphor-icons/react";
+import { MagnifyingGlass, SquaresFour, GearSix, Power, SpeakerHigh, SpeakerX } from "@phosphor-icons/react";
 import { forwardRef } from "react";
 
 type TopBarProps = {
@@ -13,6 +13,8 @@ type TopBarProps = {
   onSettings: () => void;
   onAbout: () => void;
   onPower: () => void;
+  musicOn: boolean;
+  onMusicToggle: () => void;
 };
 
 type Item = { key: string; label: string };
@@ -22,6 +24,7 @@ const ITEMS: Item[] = [
   { key: "grid", label: "All games" },
   { key: "settings", label: "Settings" },
   { key: "about", label: "About" },
+  { key: "music", label: "Music" },
   { key: "power", label: "Power" },
 ];
 
@@ -44,10 +47,12 @@ export const TopBar = forwardRef<HTMLInputElement, TopBarProps>(function TopBar(
     onSettings,
     onAbout,
     onPower,
+    musicOn,
+    onMusicToggle,
   },
   searchRef,
 ) {
-  const actions = [onSearchToggle, onGrid, onSettings, onAbout, onPower];
+  const actions = [onSearchToggle, onGrid, onSettings, onAbout, onMusicToggle, onPower];
   return (
     <header className="relative z-10 flex shrink-0 items-center justify-between gap-3 px-6 pt-5 max-md:px-4">
       <div className="flex items-center gap-2">
@@ -84,6 +89,7 @@ export const TopBar = forwardRef<HTMLInputElement, TopBarProps>(function TopBar(
               {item.key === "grid" && <SquaresFour size={18} weight="bold" />}
               {item.key === "settings" && <GearSix size={18} weight="bold" />}
               {item.key === "about" && <span className="flex h-6 w-6 items-center justify-center rounded-full bg-accent font-mono text-[11px] font-bold text-white">L</span>}
+              {item.key === "music" && (musicOn ? <SpeakerHigh size={18} weight="bold" /> : <SpeakerX size={18} weight="bold" />)}
               {item.key === "power" && <Power size={18} weight="bold" />}
               <span className="max-lg:hidden">{item.label}</span>
             </button>

@@ -109,6 +109,9 @@ export function SettingsSheet({
         <Row label="Backdrop art">
           <Switch label="Backdrop art" checked={prefs.backdrop} onChange={(on) => onPref("backdrop", on)} />
         </Row>
+        <Row label="Ambient music">
+          <Switch label="Ambient music" checked={prefs.music} onChange={(on) => onPref("music", on)} />
+        </Row>
         <div className="border-b border-line px-6 py-3.5">
           <div className="flex items-center justify-between gap-4">
             <span className="shrink-0 text-sm text-muted">Games directory</span>

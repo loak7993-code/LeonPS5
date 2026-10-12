@@ -147,6 +147,7 @@ function Launcher() {
       else if (index === 1) setOverlay("grid");
       else if (index === 2) setOverlay("settings");
       else if (index === 3) setOverlay("about");
+      else if (index === 4) setPref("music", !prefs.music);
       else setOverlay("power");
     },
     onCardConfirm: activate,
@@ -240,6 +241,8 @@ function Launcher() {
         }}
         onSettings={() => setOverlay("settings")}
         onAbout={() => setOverlay("about")}
+        musicOn={prefs.music}
+        onMusicToggle={() => setPref("music", !prefs.music)}
         onPower={() => setOverlay("power")}
       />
       {library === null && loadError === null ? (

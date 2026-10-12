@@ -45,6 +45,11 @@ alignas(256) constexpr std::array<std::uint32_t, 10> SwapCode{
     0x80000602, 0xbf810000,
 };
 
+alignas(256) constexpr std::array<std::uint32_t, 10> BeyondCode{
+    0x340a0083, 0x7e020281, 0x34040290, 0x7e060285, 0x7e080280, 0xd9820008, 0x06040302, 0xe0741000,
+    0x80000605, 0xbf810000,
+};
+
 std::array<std::uint32_t, 4> BufferDescriptor(const void* data, std::uint32_t bytes) {
     const auto address = reinterpret_cast<std::uintptr_t>(data);
     return {static_cast<std::uint32_t>(address), static_cast<std::uint32_t>((address >> 32u) & 0xffffu), bytes, 0x31016facu};
@@ -133,6 +138,25 @@ void CheckMin(std::uint32_t threads, const char* what) {
     }
 }
 
+void RunBeyond(AgcDriver::VulkanDevice& device, std::uint32_t threads, std::uint32_t waveSize) {
+    Output.fill(Untouched);
+    *GdsQword() = Seed;
+    const auto output = BufferDescriptor(Output.data(), static_cast<std::uint32_t>(Output.size() * 4u));
+    const std::vector<std::uint32_t> userData(output.begin(), output.end());
+    const std::span<const std::uint32_t> code(BeyondCode);
+    Dispatch(device, code, threads, waveSize, userData);
+}
+
+void CheckBeyond(std::uint32_t threads, const char* what) {
+    Require(*GdsQword() == Seed, std::string(what) + ": the out-of-bounds atomic changed the in-bounds GDS slot");
+    for (std::uint32_t lane = 0; lane < threads; ++lane) {
+        Require(Output[lane * 2u] == 0u && Output[lane * 2u + 1u] == 0u, std::string(what) + ": lane " + std::to_string(lane) + " returned nonzero from beyond the GDS");
+    }
+    for (std::uint32_t word = threads * 2u; word < Output.size(); ++word) {
+        Require(Output[word] == Untouched, std::string(what) + ": word " + std::to_string(word) + " was written");
+    }
+}
+
 void RunSwap(AgcDriver::VulkanDevice& device, std::uint32_t threads, std::uint32_t waveSize) {
     Output.fill(Untouched);
     *GdsWord() = MinSeed;
@@ -179,6 +203,10 @@ int main() {
         CheckSwap(32u, "swap wave32");
         RunSwap(*device, 64u, 64u);
         CheckSwap(64u, "swap wave64");
+        RunBeyond(*device, 32u, 32u);
+        CheckBeyond(32u, "beyond wave32");
+        RunBeyond(*device, 64u, 64u);
+        CheckBeyond(64u, "beyond wave64");
         std::puts("gds 64-bit atomic tests passed");
         return 0;
     } catch (const std::exception& error) {

@@ -31,11 +31,54 @@ def require_web_source():
         raise RuntimeError(f"Web source missing: {WEB_DIR}")
 
 
+GLYPH_PATHS = (
+    ((150, 130), ((150, 130), (150, 370), (255, 370))),
+    ((150, 130), ((415, 130), (255, 130), (255, 248), (415, 248), (415, 370), (255, 370))),
+)
+VIEWBOX = 512
+
+
+def stroke_mask(size):
+    scale = size / VIEWBOX
+    half = 20 * scale
+    mask = bytearray(size * size)
+
+    def paint_circle(cx, cy, radius):
+        for y in range(max(0, int(cy - radius)), min(size, int(cy + radius) + 1)):
+            inner = radius * radius - (y - cy) ** 2
+            span = inner ** 0.5 if inner > 0 else 0.0
+            for x in range(max(0, int(cx - span)), min(size, int(cx + span) + 1)):
+                mask[y * size + x] = 1
+
+    def paint_segment(a, b, radius):
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        length = (dx * dx + dy * dy) ** 0.5 or 1.0
+        steps = int(length * 2) + 2
+        for index in range(steps + 1):
+            t = index / steps
+            paint_circle(a[0] + dx * t, a[1] + dy * t, radius)
+
+    for cap, points in GLYPH_PATHS:
+        paint_circle(points[0][0] * scale, points[0][1] * scale, half)
+        for point in points[1:]:
+            paint_circle(point[0] * scale, point[1] * scale, half)
+        for first, second in zip(points, points[1:]):
+            paint_segment(
+                (first[0] * scale, first[1] * scale),
+                (second[0] * scale, second[1] * scale),
+                half,
+            )
+    return mask
+
+
 def write_png(path, size):
     row_padding = (4 - (size * 3) % 4) % 4
     stride = size * 3 + row_padding
     raw = bytearray()
     radius = size // 5
+    tile_color = ICON_COLORS[1]
+    accent = ICON_COLORS[2]
+    glyph = stroke_mask(size)
     for y in range(size):
         raw.append(0)
         for x in range(size):
@@ -43,34 +86,33 @@ def write_png(path, size):
             in_corner = in_corner or (
                 x >= size - radius and y < radius and (x - (size - radius - 1)) ** 2 + (radius - y) ** 2 > radius ** 2
             )
-            if in_corner:
+            if glyph[y * size + x]:
+                raw += bytes((255, 255, 255))
+            elif in_corner:
                 raw += bytes((7, 10, 27))
-                continue
-            distance = ((x - size * 0.3) ** 2 + (y - size * 0.35) ** 2) ** 0.5 / (size * 0.75)
-            blend = max(0.0, min(1.0, 1.0 - distance))
-            top, bottom, highlight = ICON_COLORS
-            pixel = tuple(
-                int(top[channel] + (bottom[channel] - top[channel]) * blend) for channel in range(3)
-            )
-            if abs(y - size * 0.62) < size * 0.045 and size * 0.18 < x < size * 0.82:
-                pixel = highlight
-            if abs(y - size * 0.62 + size * 0.14) < size * 0.03 and size * 0.30 < x < size * 0.70:
-                pixel = highlight
-            raw += bytes(pixel)
+            else:
+                distance = ((x - size * 0.3) ** 2 + (y - size * 0.35) ** 2) ** 0.5 / (size * 0.75)
+                blend = max(0.0, min(1.0, 1.0 - distance))
+                top, bottom, _ = ICON_COLORS
+                raw += bytes(
+                    int(top[channel] + (bottom[channel] - top[channel]) * blend) for channel in range(3)
+                )
         raw += b"\x00" * row_padding
+
+    import zlib
 
     def chunk(tag, data):
         body = tag + data
-        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib_crc32(body))
-
-    def zlib_crc32(data):
-        import zlib
-
-        return zlib.crc32(data) & 0xFFFFFFFF
+        return struct.pack(">I", len(data)) + body + struct.pack(">I", zlib.crc32(body) & 0xFFFFFFFF)
 
     header = struct.pack(">IIBBBBB", size, size, 8, 2, 0, 0, 0)
-    content = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", bytes(raw)) + chunk(b"IEND", b"")
-    path.write_bytes(content)
+    content = (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", header)
+        + chunk(b"IDAT", zlib.compress(bytes(raw), 9))
+        + chunk(b"IEND", b"")
+    )
+    Path(path).write_bytes(content)
 
 
 def package_windows(version, output):

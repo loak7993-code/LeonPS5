@@ -22,6 +22,7 @@ import { AboutSheet, PowerSheet } from "./sheets/AboutPower";
 import { Onboarding } from "./Onboarding";
 import { lazy, Suspense } from "react";
 import { usePrefs } from "./prefs";
+import { startAmbience, stopAmbience, unlock } from "./ambience";
 
 const Gallery = lazy(() => import("./Gallery"));
 
@@ -69,6 +70,7 @@ function Launcher() {
     () => window.localStorage.getItem("leonps5-onboarded") !== "done",
   );
   const [prefs, setPref] = usePrefs();
+  const [gestured, setGestured] = useState(false);
   const { toast } = useToast();
   const searchRef = useRef<HTMLInputElement>(null);
   const anchorRef = useRef<string | null>(null);
@@ -161,6 +163,32 @@ function Launcher() {
     },
     onBack: closeSearch,
   });
+
+  useEffect(() => {
+    const gesture = (): void => {
+      setGestured(true);
+      unlock();
+    };
+    window.addEventListener("pointerdown", gesture, { once: true });
+    window.addEventListener("keydown", gesture, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", gesture);
+      window.removeEventListener("keydown", gesture);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!gestured) return;
+    if (stopped) {
+      stopAmbience();
+      return;
+    }
+    if (prefs.music && overlay === null && flow.launch === null && !searching) {
+      startAmbience();
+    } else {
+      stopAmbience();
+    }
+  }, [gestured, prefs.music, overlay, flow.launch, searching, stopped]);
 
   useEffect(() => {
     if (!anchorRef.current) return;

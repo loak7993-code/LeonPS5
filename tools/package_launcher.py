@@ -5,6 +5,7 @@ import stat
 import struct
 import subprocess
 import sys
+import tempfile
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -74,62 +75,65 @@ def write_png(path, size):
 
 def package_windows(version, output):
     require_web_source()
-    build_dir = output / "launcher-pyinstaller"
-    shutil.rmtree(build_dir, ignore_errors=True)
-    spec = output / "launcher.spec"
-    server_source = LAUNCHER_DIR / "server.py"
-    data_dir = DIST_DIR
-    work_path = output / "launcher-pyinstaller"
-    spec.write_text(
-        "\n".join(
-            [
-                "# -*- mode: python ; coding: utf-8 -*-",
-                "a = Analysis(",
-                f"    [r'{server_source}'],",
-                "    pathex=[],",
-                f"    datas=[(r'{data_dir}', 'dist')],",
-                "    hiddenimports=[],",
-                "    excludes=['tkinter'],",
-                ")",
-                "pyz = PYZ(a.pure)",
-                "exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name='launcher', console=False, upx=False)",
-            ]
-        ),
-        encoding="utf-8",
-    )
-    command = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--distpath", str(work_path), "--workpath", str(work_path / "build"), str(spec)]
-    subprocess.run(command, check=True)
-    binary_name = "launcher.exe" if os.name == "nt" else "launcher"
-    binary = work_path / binary_name
-    if not binary.is_file() or binary.stat().st_size == 0:
-        raise RuntimeError("PyInstaller did not produce the launcher executable")
-    if os.name == "nt":
-        shutil.copy2(binary, output / f"launcher-{version}.exe")
-        print(f"Windows exe: {output / ('launcher-' + version + '.exe')}")
-    else:
-        staged = output / f"launcher-{version}"
-        shutil.copy2(binary, staged)
-        staged.chmod(staged.stat().st_mode | stat.S_IEXEC)
-        print(f"Host binary for verification: {staged}")
+    build_root = Path(tempfile.mkdtemp(prefix="leonps5-launcher-windows-"))
+    try:
+        server_source = LAUNCHER_DIR / "server.py"
+        data_dir = DIST_DIR
+        spec = build_root / "launcher.spec"
+        spec.write_text(
+            "\n".join(
+                [
+                    "# -*- mode: python ; coding: utf-8 -*-",
+                    "a = Analysis(",
+                    f"    [r'{server_source}'],",
+                    "    pathex=[],",
+                    f"    datas=[(r'{data_dir}', 'dist')],",
+                    "    hiddenimports=[],",
+                    "    excludes=['tkinter'],",
+                    ")",
+                    "pyz = PYZ(a.pure)",
+                    "exe = EXE(pyz, a.scripts, a.binaries, a.datas, [], name='launcher', console=False, upx=False)",
+                ]
+            ),
+            encoding="utf-8",
+        )
+        command = [sys.executable, "-m", "PyInstaller", "--noconfirm", "--clean", "--distpath", str(build_root / "out"), "--workpath", str(build_root / "work"), str(spec)]
+        subprocess.run(command, check=True)
+        binary_name = "launcher.exe" if os.name == "nt" else "launcher"
+        binary = build_root / "out" / binary_name
+        if not binary.is_file() or binary.stat().st_size == 0:
+            raise RuntimeError("PyInstaller did not produce the launcher executable")
+        if os.name == "nt":
+            target = output / f"launcher-{version}.exe"
+            shutil.copy2(binary, target)
+            print(f"Windows exe: {target}")
+        else:
+            staged = output / f"launcher-{version}"
+            shutil.copy2(binary, staged)
+            staged.chmod(staged.stat().st_mode | stat.S_IEXEC)
+            print(f"Host binary for verification: {staged}")
+    finally:
+        shutil.rmtree(build_root, ignore_errors=True)
 
 
 def package_linux(version, output):
     check_dist()
-    appdir = output / "LeonPS5.AppDir"
-    shutil.rmtree(appdir, ignore_errors=True)
-    payload = appdir / "usr" / "lib" / "leonps5"
-    payload.mkdir(parents=True)
-    shutil.copy2(LAUNCHER_DIR / "server.py", payload / "server.py")
-    shutil.copytree(DIST_DIR, payload / "web" / "dist")
-    docs = Path("docs/user")
-    for document in sorted(docs.glob("*.md")):
-        shutil.copy2(document, payload / document.name)
-    readme = Path("tools/launcher/README.md")
-    if readme.is_file():
-        shutil.copy2(readme, payload / "README.md")
-    icon = appdir / "leonps5.png"
-    write_png(icon, 256)
-    (appdir / "leonps5.desktop").write_text(
+    build_root = Path(tempfile.mkdtemp(prefix="leonps5-launcher-linux-"))
+    appdir = build_root / "LeonPS5.AppDir"
+    try:
+        payload = appdir / "usr" / "lib" / "leonps5"
+        payload.mkdir(parents=True)
+        shutil.copy2(LAUNCHER_DIR / "server.py", payload / "server.py")
+        shutil.copytree(DIST_DIR, payload / "web" / "dist")
+        docs = Path("docs/user")
+        for document in sorted(docs.glob("*.md")):
+            shutil.copy2(document, payload / document.name)
+        readme = Path("tools/launcher/README.md")
+        if readme.is_file():
+            shutil.copy2(readme, payload / "README.md")
+        icon = appdir / "leonps5.png"
+        write_png(icon, 256)
+        (appdir / "leonps5.desktop").write_text(
         "\n".join(
             [
                 "[Desktop Entry]",
@@ -145,8 +149,8 @@ def package_linux(version, output):
         + "\n",
         encoding="utf-8",
     )
-    apprun = appdir / "AppRun"
-    apprun.write_text(
+        apprun = appdir / "AppRun"
+        apprun.write_text(
         "\n".join(
             [
                 "#!/bin/sh",
@@ -160,19 +164,20 @@ def package_linux(version, output):
         + "\n",
         encoding="utf-8",
     )
-    apprun.chmod(apprun.stat().st_mode | stat.S_IEXEC)
-    tool = (output / "appimagetool.AppImage").resolve()
-    if not tool.is_file():
-        tool.parent.mkdir(parents=True, exist_ok=True)
-        urllib.request.urlretrieve(APPIMAGE_TOOL_URL, tool)
-    tool.chmod(tool.stat().st_mode | stat.S_IEXEC)
-    target = (output / f"launcher-{version}.AppImage").resolve()
-    subprocess.run(
-        [str(tool), "--appimage-extract-and-run", str(appdir.resolve()), str(target), "-n"],
-        check=True,
-    )
-    target.chmod(target.stat().st_mode | stat.S_IEXEC)
-    print(f"AppImage: {target}")
+        apprun.chmod(apprun.stat().st_mode | stat.S_IEXEC)
+        tool = build_root / "appimagetool.AppImage"
+        if not tool.is_file():
+            urllib.request.urlretrieve(APPIMAGE_TOOL_URL, tool)
+        tool.chmod(tool.stat().st_mode | stat.S_IEXEC)
+        target = (output / f"launcher-{version}.AppImage").resolve()
+        subprocess.run(
+            [str(tool), "--appimage-extract-and-run", str(appdir.resolve()), str(target), "-n"],
+            check=True,
+        )
+        target.chmod(target.stat().st_mode | stat.S_IEXEC)
+        print(f"AppImage: {target}")
+    finally:
+        shutil.rmtree(build_root, ignore_errors=True)
 
 
 def main():

@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { FolderOpen, Play } from "@phosphor-icons/react";
 import { GameArt } from "./Art";
@@ -54,6 +54,36 @@ function useCardWidth(railRef: React.RefObject<HTMLDivElement | null>, count: nu
   return cardWidth;
 }
 
+function useInfoTop(
+  railRef: React.RefObject<HTMLDivElement | null>,
+  sectionRef: React.RefObject<HTMLElement | null>,
+  enabled: boolean,
+  cardWidth: number,
+  count: number,
+): number {
+  const [top, setTop] = useState(0);
+
+  useLayoutEffect(() => {
+    if (!enabled) return;
+    const section = sectionRef.current;
+    const card = railRef.current?.firstElementChild;
+    if (!section || !card) return;
+    const update = () => {
+      const sectionTop = section.getBoundingClientRect().top;
+      const cardBottom = card.getBoundingClientRect().bottom;
+      setTop(Math.max(0, cardBottom - sectionTop + 12));
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(card);
+    observer.observe(section);
+    if (railRef.current) observer.observe(railRef.current);
+    return () => observer.disconnect();
+  }, [railRef, sectionRef, enabled, cardWidth, count]);
+
+  return top;
+}
+
 type RailProps = {
   games: Game[];
   index: number;
@@ -70,9 +100,11 @@ type RailProps = {
 
 export function Rail({ games, index, searching, onSelect, onActivate, gap: gapProp, radius: radiusProp, shadow, info = false, onPlay, onOpenFolder }: RailProps) {
   const railRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const GAP = gapProp ?? 18;
   const radius = radiusProp ?? 14;
   const cardWidth = useCardWidth(railRef, games.length);
+  const infoTop = useInfoTop(railRef, sectionRef, info, cardWidth, games.length);
 
   const selectById = useCallback(
     (id: string) => {
@@ -90,7 +122,7 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
   const titleX = info ? LEAD : Math.min(LEAD + index * step, LEAD * 2);
 
   return (
-    <section aria-label="Game rail" className="relative min-h-0 flex-1 overflow-x-clip">
+    <section ref={sectionRef} aria-label="Game rail" className="relative min-h-0 flex-1 overflow-x-clip">
       <div className="relative z-10 h-full">
         <AnimatePresence mode="wait">
           {selected && !searching && (
@@ -116,7 +148,8 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
           {selected && !searching && info && (
             <motion.div
               key={selected.id + "-info"}
-              className="absolute inset-x-0 bottom-0 z-10 pl-[4.5rem] pr-6 max-md:pl-4 max-md:pr-4"
+              className="absolute inset-x-0 z-10 pl-[4.5rem] pr-6 max-md:pl-4 max-md:pr-4"
+              style={{ top: infoTop }}
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0, transition: { duration: 0.22, ease: "easeOut" } }}
               exit={{ opacity: 0, y: 8, transition: { duration: 0.14, ease: "easeIn" } }}
@@ -156,7 +189,7 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
         </AnimatePresence>
         <div
           className={`absolute inset-x-0 overflow-hidden transition-all duration-200 ease-out ${
-            info ? "top-24 bottom-[12.5rem] max-md:top-20 max-md:bottom-[14rem]" : "top-24 bottom-4 max-md:top-20 max-md:bottom-3"
+            info ? "top-24 bottom-40 max-md:top-20 max-md:bottom-44" : "top-24 bottom-4 max-md:top-20 max-md:bottom-3"
           }`}
         >
           {games.length > 0 ? (

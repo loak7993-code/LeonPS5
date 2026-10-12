@@ -193,7 +193,8 @@ bool TranslationContext::dsWrite2(const RdnaInstruction& inst) {
 }
 
 bool TranslationContext::dsSrc2(const RdnaInstruction& inst, IrOpcode opcode) {
-    const MemoryInfo memory = sharedMemoryInfoFromInstruction(inst);
+    MemoryInfo memory = sharedMemoryInfoFromInstruction(inst);
+    memory.flushDenormals = sharedFloatFlush(opcode);
     const IrU32 address = readU32(inst.source0);
     MemoryInfo source = memory;
     source.offset = memory.secondaryOffset;

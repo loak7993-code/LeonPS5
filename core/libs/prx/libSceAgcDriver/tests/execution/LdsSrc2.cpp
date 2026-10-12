@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -49,6 +50,14 @@ alignas(256) constexpr std::array<std::uint32_t, 171> Code{
 
 alignas(256) constexpr std::array<std::uint32_t, 3> AddressOffsetCode{0xda008000, 0x00000000, 0xbf810000};
 
+alignas(256) constexpr std::array<std::uint32_t, 33> FloatCode{
+    0x34020084, 0x34040085, 0x34060086, 0xe0341000, 0x80000401, 0xe0341008, 0x80000a01, 0xbf8c3f70,
+    0xd8380100, 0x00050402, 0xda480001, 0x06000002, 0xd8d80000, 0x07000002, 0xd8340000, 0x00000402,
+    0xda4c0001, 0x08000002, 0xd8d80000, 0x09000002, 0xd8380100, 0x000b0a02, 0xda540001, 0x0c000002,
+    0xd8d80000, 0x0d000002, 0xe0741000, 0x80010603, 0xe0741008, 0x80010803, 0xe0741010, 0x80010c03,
+    0xbf810000,
+};
+
 void Fill(std::uint32_t tid, std::uint32_t* words) {
     const std::uint64_t seed = (tid + 1u) * 0x9e3779b97f4a7c15ull;
     const auto mixed = seed * 0xbf58476d1ce4e5b9ull;
@@ -56,6 +65,14 @@ void Fill(std::uint32_t tid, std::uint32_t* words) {
     words[1] = tid % 4u == 0u ? (tid * 3u) % 7u : tid % 4u == 1u ? words[0] : static_cast<std::uint32_t>(mixed >> 32u);
     words[2] = std::bit_cast<std::uint32_t>(static_cast<float>(static_cast<std::int32_t>(tid % 9u) - 4) * 1.75f + 0.5f);
     words[3] = std::bit_cast<std::uint32_t>(static_cast<float>(static_cast<std::int32_t>((tid * 5u) % 11u) - 5) * 0.625f + 0.25f);
+}
+
+void FillFloat(std::uint32_t tid, std::uint32_t* words) {
+    words[0] = 0.0f;
+    const auto magnitude = 0x00000001u + (tid % 0x3fu);
+    words[1] = tid % 2u == 0u ? magnitude : magnitude | 0x80000000u;
+    words[2] = 0x3f800000u;
+    words[3] = 0x40000000u;
 }
 
 std::array<std::uint32_t, 4> BufferDescriptor(const void* data, std::uint32_t bytes) {
@@ -69,7 +86,8 @@ std::string Hex(std::uint32_t value) {
     return text;
 }
 
-ShaderRecompiler::RecompileResult Compile(AgcDriver::VulkanDevice& device, std::span<const std::uint32_t> code) {
+ShaderRecompiler::RecompileResult Compile(AgcDriver::VulkanDevice& device, std::span<const std::uint32_t> code,
+    const std::optional<ShaderRecompiler::ShaderFloatMode>& floatMode = std::nullopt) {
     std::vector<std::uint32_t> userData(8, 0u);
     const auto input = BufferDescriptor(Input.data(), static_cast<std::uint32_t>(Input.size() * 4u));
     const auto output = BufferDescriptor(Output.data(), static_cast<std::uint32_t>(Output.size() * 4u));
@@ -84,6 +102,7 @@ ShaderRecompiler::RecompileResult Compile(AgcDriver::VulkanDevice& device, std::
         {0, 0, 0, 128}
     };
     request.useCache = false;
+    request.context.floatMode = floatMode;
     return ShaderRecompiler::Recompile(request);
 }
 
@@ -92,6 +111,14 @@ void Run(AgcDriver::VulkanDevice& device) {
     Output.fill(0xdeadbeefu);
     const auto result = Compile(device, Code);
     device.Dispatch(result, 1, 1, 1, {}, reinterpret_cast<std::uintptr_t>(Code.data()));
+    device.WaitIdle();
+}
+
+void RunFloat(AgcDriver::VulkanDevice& device, const std::optional<ShaderRecompiler::ShaderFloatMode>& floatMode) {
+    for (std::uint32_t tid = 0; tid < Threads; ++tid) FillFloat(tid, &Input[tid * Inputs]);
+    Output.fill(0xdeadbeefu);
+    const auto result = Compile(device, FloatCode, floatMode);
+    device.Dispatch(result, 1, 1, 1, {}, reinterpret_cast<std::uintptr_t>(FloatCode.data()));
     device.WaitIdle();
 }
 
@@ -118,17 +145,24 @@ void CheckLanes() {
     }
 }
 
-void CheckFloatRejected(AgcDriver::VulkanDevice& device) {
-    for (const std::uint32_t opcode : {0x92u, 0x93u, 0x95u}) {
-        alignas(256) static std::array<std::uint32_t, 3> code{};
-        code = {0xd8000000u | (opcode << 18u) | 1u, 0x00000000u, 0xbf810000u};
-        bool refused = false;
-        try {
-            (void)Compile(device, code);
-        } catch (const std::exception& error) {
-            refused = std::string(error.what()).find("f32 denormal mode") != std::string::npos;
+void CheckFloat(AgcDriver::VulkanDevice& device, bool flushed) {
+    RunFloat(device, ShaderRecompiler::ShaderFloatMode{flushed ? 0x00u : 0xf0u, true, false, false});
+    for (std::uint32_t tid = 0; tid < Threads; ++tid) {
+        const std::uint32_t* in = &Input[tid * Inputs];
+        const std::uint32_t data = in[1];
+        const std::uint32_t negative = data & 0x80000000u;
+        const std::uint32_t minMemory = flushed ? (negative ? 0x80000000u : 0x00000000u) : negative ? data : 0x00000000u;
+        const std::uint32_t maxMemory = flushed ? 0x00000000u : negative ? 0x00000000u : data;
+        const std::array<std::pair<std::uint32_t, const char*>, 3> expected{{
+            {minMemory, "ds_min_src2_f32 memory"},
+            {maxMemory, "ds_max_src2_f32 memory"},
+            {0x40400000u, "ds_add_src2_f32 memory"},
+        }};
+        for (std::uint32_t column = 0; column < expected.size(); ++column) {
+            const auto& [value, name] = expected[column];
+            const std::uint32_t actual = Output[tid * Results + column * 2u + 1u];
+            Require(actual == value, "lds src2: " + std::string(flushed ? "flushed " : "kept ") + "lane " + std::to_string(tid) + " " + name + " is " + Hex(actual) + ", expected " + Hex(value));
         }
-        Require(refused, "lds src2: f32 opcode " + Hex(opcode) + " was not refused");
     }
 }
 
@@ -150,7 +184,8 @@ int main() {
         Run(*device);
         CheckLanes();
         CheckAddressOffsetRejected(*device);
-        CheckFloatRejected(*device);
+        CheckFloat(*device, true);
+        CheckFloat(*device, false);
         std::puts("lds src2 tests passed");
         return 0;
     } catch (const std::exception& error) {

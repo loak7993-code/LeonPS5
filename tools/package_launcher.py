@@ -104,7 +104,7 @@ def package_windows(version, output):
         if not binary.is_file() or binary.stat().st_size == 0:
             raise RuntimeError("PyInstaller did not produce the launcher executable")
         if os.name == "nt":
-            target = output / f"launcher-{version}.exe"
+            target = output / f"launcher-windows-{version}.exe"
             shutil.copy2(binary, target)
             print(f"Windows exe: {target}")
         else:
@@ -169,7 +169,7 @@ def package_linux(version, output):
         if not tool.is_file():
             urllib.request.urlretrieve(APPIMAGE_TOOL_URL, tool)
         tool.chmod(tool.stat().st_mode | stat.S_IEXEC)
-        target = (output / f"launcher-{version}.AppImage").resolve()
+        target = (output / f"launcher-linux-{version}.AppImage").resolve()
         subprocess.run(
             [str(tool), "--appimage-extract-and-run", str(appdir.resolve()), str(target), "-n"],
             check=True,

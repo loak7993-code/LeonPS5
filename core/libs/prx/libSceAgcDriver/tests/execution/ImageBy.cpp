@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <map>
 #include <span>
 #include <string>
 #include <vector>
@@ -153,6 +154,160 @@ void Check(AgcDriver::VulkanDevice& device, std::uint32_t opcode, const Format& 
     Require(Texels == initial, name + ": the load changed the texture");
 }
 
+constexpr std::uint32_t StoreWidth = 32u;
+constexpr std::uint32_t StoreHeight = 8u;
+constexpr std::uint32_t StoreLevels = 2u;
+constexpr std::size_t StoreBlockBytes = 65536u;
+
+class StoreBlock {
+public:
+    StoreBlock() {
+        block = static_cast<std::uint8_t*>(std::aligned_alloc(StoreBlockBytes, StoreBlockBytes));
+        Require(block != nullptr, "image BY store: cannot allocate the guest block");
+        GuestAllocations::Mutation().Add(block, StoreBlockBytes, true, true, true);
+    }
+    ~StoreBlock() {
+        GuestAllocations::Mutation().Remove(block);
+        std::free(block);
+    }
+    std::uint8_t* data() { return block; }
+
+private:
+    std::uint8_t* block = nullptr;
+};
+
+std::vector<AgcDriver::Graphics::TileMipLayout> StoreMips(const Format& format) {
+    return AgcDriver::Graphics::ComputeMipLayout(AgcDriver::Graphics::TextureTileMode::kLinear, format.id, StoreWidth, StoreHeight, StoreLevels);
+}
+
+void StoreRun(AgcDriver::VulkanDevice& device, StoreBlock& block, std::uint32_t opcode, const Format& format, std::uint32_t dmask,
+    const std::vector<std::array<std::uint32_t, 3>>& threads) {
+    std::vector<std::uint32_t> code{0x34060084u, 0xe0381000u, 0x80031e03u, 0xbf8c3f70u};
+    // The data values stay within the format's component range: the llvmpipe test device
+    // converts UINT image stores through the unorm path (values above the component max
+    // clamp to the max), so in-range values behave identically under the console's
+    // truncation and the device's conversion.
+    for (std::uint32_t index = 0; index < 4u; ++index) {
+        code.push_back(0x7e0002ffu | ((10u + index) << 17u));
+        code.push_back(index);
+    }
+    code.push_back(0xf0000008u | (opcode << 18u) | (dmask << 8u));
+    code.push_back(0x00010a1eu);
+    code.push_back(0xbf8c3f70u);
+    code.push_back(0xe0781000u);
+    code.push_back(0x80000a03u);
+    code.push_back(0xbf810000u);
+    for (std::uint32_t thread = 0; thread < Threads; ++thread) {
+        const auto& xy = thread < threads.size() ? threads[thread] : std::array<std::uint32_t, 3>{0u, StoreHeight, 0u};
+        Input[thread * 4u + 0u] = xy[0];
+        Input[thread * 4u + 1u] = xy[1];
+        Input[thread * 4u + 2u] = xy[2];
+        Input[thread * 4u + 3u] = 0u;
+    }
+    Output.fill(0xdeadbeefu);
+    std::span<const std::uint32_t> words(code);
+    const std::array<ShaderRecompiler::MemoryRegion, 1> memory{{{reinterpret_cast<std::uintptr_t>(code.data()), std::as_bytes(words)}}};
+    const auto texture = [&] {
+        const auto address = reinterpret_cast<std::uintptr_t>(block.data());
+        return std::array<std::uint32_t, 8>{static_cast<std::uint32_t>(address >> 8u),
+            static_cast<std::uint32_t>((address >> 40u) & 0xffu) | (format.id << 20u) | (((StoreWidth - 1u) & 3u) << 30u),
+            ((StoreWidth - 1u) >> 2u) | ((StoreHeight - 1u) << 14u), 0xfacu | ((StoreLevels - 1u) << 16u) | (9u << 28u),
+            0u, (StoreLevels - 1u) << 4u, 0u, 0u};
+    }();
+    std::vector<std::uint32_t> userData(16u, 0u);
+    const auto output = BufferDescriptor(Output.data(), static_cast<std::uint32_t>(sizeof(Output)));
+    const auto input = BufferDescriptor(Input.data(), static_cast<std::uint32_t>(sizeof(Input)));
+    std::copy(output.begin(), output.end(), userData.begin());
+    std::copy(texture.begin(), texture.end(), userData.begin() + 4u);
+    std::copy(input.begin(), input.end(), userData.begin() + 12u);
+    const ShaderRecompiler::ShaderComputeStageInfo compute{{Threads, 1u, 1u}, 0u, {false, false, false}, false, 1u};
+    ShaderRecompiler::RecompileRequest request{
+        {ShaderRecompiler::ShaderStage::Compute, reinterpret_cast<std::uintptr_t>(code.data()), words, 0u, {}},
+        {32u, 0u, userData, compute, std::nullopt, std::nullopt, memory}, device.Target(), {0u, 0u, 0u, 128u}};
+    request.useCache = false;
+    device.Dispatch(ShaderRecompiler::Recompile(request), 1u, 1u, 1u, {}, reinterpret_cast<std::uintptr_t>(code.data()));
+    device.WaitIdle();
+    AgcDriver::Graphics::StorageTexture::FlushPending(reinterpret_cast<std::uintptr_t>(block.data()), StoreBlockBytes, nullptr, "test");
+    device.WaitIdle();
+}
+
+void StoreCheck(AgcDriver::VulkanDevice& device, std::uint32_t opcode, const Format& format, std::uint32_t dmask) {
+    const auto elements = (opcode & 1u) != 0u ? 4u : 2u;
+    const bool mip = (opcode & 8u) != 0u;
+    const auto dwords = static_cast<std::uint32_t>(std::popcount(dmask));
+    const auto components = dwords / elements;
+    const auto name = "image BY store opcode " + std::to_string(opcode) + " format " + std::to_string(format.id) + " dmask " + std::to_string(dmask);
+    const auto mips = StoreMips(format);
+    StoreBlock block;
+    auto bytes = std::vector<std::uint8_t>(StoreBlockBytes, 0u);
+    for (std::size_t index = 0; index < bytes.size(); ++index) bytes[index] = static_cast<std::uint8_t>(0x80u + 37u * index + 11u * (index >> 4u));
+    std::copy(bytes.begin(), bytes.end(), block.data());
+    // Non-overlapping threads: the in-range ones tile the first row; the rest sit
+    // out of range (y = StoreHeight) or on rows with disjoint columns.
+    std::vector<std::array<std::uint32_t, 3>> threads;
+    const auto inRange = StoreWidth / elements;
+    for (std::uint32_t index = 0; index < inRange; ++index) threads.push_back({index * elements, 0u, 0u});
+    if (mip) {
+        for (std::uint32_t index = inRange; index < Threads; ++index) {
+            const auto level = index % StoreLevels;
+            const auto position = (index / StoreLevels) * elements;
+            threads.push_back({position, level == 0u ? 4u : 5u, level});
+        }
+    } else {
+        const std::array<std::uint32_t, 8> edges{StoreWidth - 1u, StoreWidth, 0xffffffffu, 0x80000000u, 1u, 1u + elements, 1u + 2u * elements, 1u + 3u * elements};
+        for (std::uint32_t index = inRange; index < Threads; ++index) {
+            const auto& edge = edges[(index - inRange) % edges.size()];
+            threads.push_back({edge, 1u + (index - inRange) / edges.size(), 0u});
+        }
+    }
+    StoreRun(device, block, opcode, format, dmask, threads);
+    // Sentinel addresses such as 0xffffffff wrap x + element back into the row, so the
+    // phantom columns of a non-writing thread can collide with a real write from another
+    // thread. Collect the written texels first, then sweep every texel once: written
+    // texels carry their data value, every other texel keeps the fill pattern.
+    std::map<std::uint64_t, std::uint8_t> writtenTexels;
+    for (std::uint32_t thread = 0; thread < threads.size(); ++thread) {
+        const auto [x, y, level] = threads[thread];
+        const auto& mipInfo = mips.at(level);
+        const auto width = std::max(StoreWidth >> level, 1u);
+        const auto height = std::max(StoreHeight >> level, 1u);
+        const auto range = elements - (x & (elements - 1u));
+        for (std::uint32_t element = 0; element < elements; ++element) {
+            const auto column = x + element;
+            if (!(column < width && y < height && element < range)) continue;
+            for (std::uint32_t component = 0; component < format.components; ++component) {
+                const auto offset = mipInfo.tiledOffset + static_cast<std::uint64_t>(y) * mipInfo.pitchBytes + (static_cast<std::uint64_t>(column) * format.components + component) * format.bytes;
+                if (offset + format.bytes > StoreBlockBytes) continue;
+                const auto value = element * components + component;
+                const auto expected = format.bytes == 1u ? static_cast<std::uint8_t>(value & 0xffu) : static_cast<std::uint8_t>((value & 0xffffu) >> (8u * component));
+                Require(writtenTexels.emplace(offset, expected).second, name + ": thread " + std::to_string(thread) + " (x " + std::to_string(x) + ", y " + std::to_string(y) + ", mip " + std::to_string(level) + ") writes texel " + std::to_string(column) + " component " + std::to_string(component) + " twice");
+            }
+        }
+    }
+    for (std::uint32_t level = 0; level < mips.size(); ++level) {
+        const auto& mipInfo = mips.at(level);
+        const auto width = std::max(StoreWidth >> level, 1u);
+        const auto height = std::max(StoreHeight >> level, 1u);
+        for (std::uint32_t y = 0; y < height; ++y) {
+            for (std::uint32_t column = 0; column < width; ++column) {
+                for (std::uint32_t component = 0; component < format.components; ++component) {
+                    const auto offset = mipInfo.tiledOffset + static_cast<std::uint64_t>(y) * mipInfo.pitchBytes + (static_cast<std::uint64_t>(column) * format.components + component) * format.bytes;
+                    if (offset + format.bytes > StoreBlockBytes) continue;
+                    auto expected = bytes.at(offset);
+                    if (const auto found = writtenTexels.find(offset); found != writtenTexels.end()) expected = found->second;
+                    const auto actual = block.data()[offset];
+                    Require(actual == expected, name + ": mip " + std::to_string(level) + " texel " + std::to_string(column) + "," + std::to_string(y) + " component " + std::to_string(component) + " is " + std::to_string(actual) + ", expected " + std::to_string(expected));
+                }
+            }
+        }
+    }
+    for (std::uint32_t thread = 0; thread < Threads; ++thread) {
+        for (std::uint32_t index = 0; index < 4u; ++index) {
+            Require(Output[thread * 4u + index] == index, name + ": thread " + std::to_string(thread) + " output " + std::to_string(index) + " is " + std::to_string(Output[thread * 4u + index]) + ", expected " + std::to_string(index));
+        }
+    }
+}
+
 void Refused(AgcDriver::VulkanDevice& device, std::uint32_t opcode, std::uint32_t format, std::uint32_t dmask, std::uint32_t swizzle, const char* reason) {
     bool refused = false;
     try { Run(device, opcode, format, dmask, swizzle); }
@@ -182,7 +337,16 @@ int main() {
         Refused(*device, 0x43u, R16UInt, 0xfu, 0xfacu, layout);
         Refused(*device, 0x43u, Rg8UInt, 0xfu, 0xfacu, layout);
         Refused(*device, 0x42u, R16UInt, 0x3u, 0xf2eu, layout);
-        for (const auto opcode : {0x52u, 0x53u, 0x5au, 0x5bu}) Refused(*device, opcode, R8UInt, 0xfu, 0xfacu, "stores are not implemented");
+        for (const auto opcode : {0x52u, 0x5au}) {
+            StoreCheck(*device, opcode, r8, 0x3u);
+            StoreCheck(*device, opcode, r16, 0x3u);
+            StoreCheck(*device, opcode, rg8, 0xfu);
+        }
+        for (const auto opcode : {0x53u, 0x5bu}) StoreCheck(*device, opcode, r8, 0xfu);
+        Refused(*device, 0x52u, R32UInt, 0x3u, 0xfacu, layout);
+        Refused(*device, 0x52u, R8UInt, 0xfu, 0xfacu, layout);
+        Refused(*device, 0x53u, R16UInt, 0xfu, 0xfacu, layout);
+        Refused(*device, 0x52u, R16UInt, 0x3u, 0xf2eu, layout);
         GuestAllocations::Mutation().Remove(Texels.data());
         std::cout << "image BY2/BY4 execution tests passed\n";
         return 0;

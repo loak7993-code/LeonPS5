@@ -38,10 +38,17 @@ void Check(std::uint32_t index, bool nsa, std::uint32_t mask) {
     program.SetEntryBlock(block);
     TranslationContext context(program, block, 256);
     if (store) {
-        bool refused = false;
-        try { context.TranslateInstruction(inst); }
-        catch (const std::runtime_error& error) { refused = std::string(error.what()).find("stores are not implemented") != std::string::npos; }
-        Require(refused);
+        context.TranslateInstruction(inst);
+        std::uint32_t storeOps = 0;
+        for (auto* value : block.Instructions()) {
+            if (value->Opcode() == IrOpcode::ImageWrite) {
+                const auto& memory = program.Resources().memoryInfo[value->Flags<MemoryFlags>().index];
+                Require(memory.imageByElements == elements && memory.dmask == mask && memory.dataDwords == dwords);
+                Require(memory.imageHasMip == ((encoding & 8u) != 0u));
+                ++storeOps;
+            }
+        }
+        Require(storeOps == 1u);
         return;
     }
     context.TranslateInstruction(inst);

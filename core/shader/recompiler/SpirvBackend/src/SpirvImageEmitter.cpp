@@ -981,8 +981,84 @@ std::uint32_t ImageSampleIndex(SpirvValueEmitContext& ctx, const ImageEmitAccess
     return AddressU32(ctx, access, addressInfo.coordinateComponents);
 }
 
+void EmitByWriteOp(SpirvValueEmitContext& ctx, const ImageEmitAccess& access) {
+    auto& state = ctx.state;
+    if (access.slot != 0) {
+        ctx.Fail(access.inst, "stores through a bindless image table are unsupported");
+    }
+    const auto elements = access.mem.imageByElements;
+    const auto components = access.mem.dataDwords / elements;
+    if (access.image.dimension != RdnaImageDimension::Dim2D || components == 0u || components * elements != access.mem.dataDwords || access.mem.dataBits != 32u) {
+        ctx.Fail(access.inst, "is a MIMG BY2/BY4 store outside the measured 2D, 32-bit data subset");
+    }
+    const bool uintImage = access.image.numericClass == IrTextureNumericClass::Uint;
+    EmitIfCondition(state, ctx.Arg(access.inst, 3), [&]() {
+        state.module.EmitCapability(spv::CapabilityImageQuery);
+        const auto image = state.module.AllocateId();
+        state.module.AddFunction(spv::OpLoad, ImageType(state, access.image), image, StorageImageDescriptorPointer(state, access.mem.resource));
+        const auto x = AddressU32(ctx, access, 0);
+        const auto y = AddressU32(ctx, access, 1);
+        const bool dynamicMip = access.image.mipMode == ImageMipMode::DynamicStorage;
+        std::uint32_t queryLod = ConstantU32(state, 0);
+        if (dynamicMip) queryLod = LodU32(ctx, access);
+        const auto size = state.module.AllocateId();
+        state.module.AddFunction(spv::OpImageQuerySize, ImageViewSizeType(state, access.image.dimension), size, image);
+        const auto levelExtent = [&](std::uint32_t axis) {
+            const auto base = state.module.AllocateId();
+            state.module.AddFunction(spv::OpCompositeExtract, TypeU32(state), base, size, axis);
+            const auto shifted = Binary(state, spv::OpShiftRightLogical, TypeU32(state), base, queryLod);
+            return Select(state, TypeU32(state), Binary(state, spv::OpUGreaterThan, TypeBool(state), shifted, ConstantU32(state, 1)), shifted, ConstantU32(state, 1));
+        };
+        const auto width = levelExtent(0u);
+        const auto height = levelExtent(1u);
+        const auto texelIndex = Binary(state, spv::OpBitwiseAnd, TypeU32(state), x, ConstantU32(state, elements - 1u));
+        const auto range = Binary(state, spv::OpISub, TypeU32(state), ConstantU32(state, elements), texelIndex);
+        const auto data = ctx.Arg(access.inst, 2);
+        const auto lodInside = [&]() -> std::uint32_t {
+            if (!dynamicMip) return ConstantU32(state, 1);
+            const auto lod = LodU32(ctx, access);
+            const auto levels = state.module.SpecializationConstant(TypeU32(state), PipelineSpecialization::MipCountBase + access.mem.resource, access.image.mipCount);
+            return Binary(state, spv::OpULessThan, TypeBool(state), lod, levels);
+        }();
+        MemoryInfo texelMemory = access.mem;
+        texelMemory.dmask = (1u << components) - 1u;
+        texelMemory.dataDwords = components;
+        texelMemory.componentCount = components;
+        const ImageEmitAccess texelAccess{access.inst, texelMemory, access.image, access.address, access.table, access.slot};
+        for (std::uint32_t element = 0; element < elements; ++element) {
+            const auto column = Binary(state, spv::OpIAdd, TypeU32(state), x, ConstantU32(state, element));
+            // x + element wraps for sentinel addresses such as 0xffffffff, so the row test
+            // compares x and width directly and bounds the element by width - x.
+            const auto inWidth = Binary(state, spv::OpULessThan, TypeBool(state), x, width);
+            const auto withinRow = Binary(state, spv::OpULessThan, TypeBool(state), ConstantU32(state, element), Binary(state, spv::OpISub, TypeU32(state), width, x));
+            const auto inRow = Binary(state, spv::OpLogicalAnd, TypeBool(state), inWidth, withinRow);
+            const auto inDword = Binary(state, spv::OpULessThan, TypeBool(state), ConstantU32(state, element), range);
+            auto written = Binary(state, spv::OpLogicalAnd, TypeBool(state), inRow, lodInside);
+            written = Binary(state, spv::OpLogicalAnd, TypeBool(state), written, inDword);
+            EmitIfCondition(state, written, [&]() {
+                std::uint32_t parts[4] = {ConstantU32(state, 0), ConstantU32(state, 0), ConstantU32(state, 0), ConstantU32(state, 0)};
+                for (std::uint32_t component = 0; component < components; ++component) {
+                    const auto value = state.module.AllocateId();
+                    state.module.AddFunction(spv::OpCompositeExtract, TypeU32(state), value, data, element * components + component);
+                    parts[component] = value;
+                }
+                const auto texelData = state.module.AllocateId();
+                state.module.AddFunction(spv::OpCompositeConstruct, TypeU32Vector(state, 4), texelData, parts[0], parts[1], parts[2], parts[3]);
+                const auto coord = state.module.AllocateId();
+                state.module.AddFunction(spv::OpCompositeConstruct, TypeU32Vector(state, 2), coord, column, y);
+                const auto texel = StoreTexel(ctx, texelAccess, texelData, uintImage);
+                EmitStorageImageWrite(state, access.mem.resource, dynamicMip ? queryLod : 0u, coord, texel, ConstantU32(state, 0));
+            });
+        }
+    });
+}
+
 void EmitWriteOp(SpirvValueEmitContext& ctx, const ImageEmitAccess& access) {
     auto& state = ctx.state;
+    if (access.mem.imageByElements != 0u) {
+        EmitByWriteOp(ctx, access);
+        return;
+    }
     if (access.slot != 0) {
         ctx.Fail(access.inst, "stores through a bindless image table are unsupported");
     }

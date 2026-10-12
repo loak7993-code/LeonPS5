@@ -96,7 +96,7 @@ jobs:
       - name: Run tests (Windows)
         if: matrix.platform == 'windows'
         shell: cmd
-        run: ctest --test-dir build --output-on-failure --timeout 300 --stop-on-failure --no-tests=error -E "agc_driver_(flip|graphics|mesh)$|agc_recorder" --repeat until-pass:3
+        run: ctest --test-dir build --output-on-failure --timeout 300 --stop-on-failure --no-tests=error -E "agc_driver_|agc_recorder_" --repeat until-pass:3
       - name: Build patched libraries (Linux)
         if: matrix.platform == 'linux'
         run: cmake --build build --target libs

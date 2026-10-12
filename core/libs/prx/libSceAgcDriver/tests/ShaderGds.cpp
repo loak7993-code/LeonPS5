@@ -39,12 +39,13 @@ constexpr std::uint32_t DsRegisters(std::uint32_t vdst, std::uint32_t data1, std
     return (vdst << 24u) | (data1 << 16u) | (data0 << 8u) | addr;
 }
 
-constexpr std::array<std::uint32_t, 11> Code{
+constexpr std::array<std::uint32_t, 13> Code{
     DsWord(0x60u, 0x40u), DsRegisters(4u, 2u, 1u, 0u),
     DsWord(0x27u, 0x80u), DsRegisters(6u, 0u, 3u, 0u),
     DsWord(0x70u, 0xc0u), DsRegisters(8u, 5u, 3u, 0u),
     DsWord(0x7eu, 0x100u), DsRegisters(10u, 8u, 3u, 0u),
     DsWord(0x87u, 0x40u), DsRegisters(12u, 0u, 0u, 0u),
+    DsWord(0x6eu, 0x2010u), DsRegisters(16u, 6u, 2u, 0u),
     0xbf810000u,
 };
 
@@ -67,6 +68,7 @@ struct ModuleFacts {
     std::size_t atomic64 = 0;
     std::size_t atomicCompareExchange64 = 0;
     std::size_t atomic32 = 0;
+    std::size_t atomicExchange64 = 0;
     std::uint32_t gdsId = 0;
 };
 
@@ -90,8 +92,10 @@ ModuleFacts Inspect(const RecompileResult& result) {
         } else if (opcode == spv::OpAtomicCompareExchange) {
             facts.atomicCompareExchange64 += is64(words[offset + 1u]) ? 1u : 0u;
         } else if (opcode == spv::OpAtomicIAdd || opcode == spv::OpAtomicISub || opcode == spv::OpAtomicSMin || opcode == spv::OpAtomicUMin || opcode == spv::OpAtomicSMax || opcode == spv::OpAtomicUMax || opcode == spv::OpAtomicAnd || opcode == spv::OpAtomicOr || opcode == spv::OpAtomicXor || opcode == spv::OpAtomicExchange) {
-            if (is64(words[offset + 1u])) ++facts.atomic64;
-            else ++facts.atomic32;
+            if (is64(words[offset + 1u])) {
+                ++facts.atomic64;
+                if (opcode == spv::OpAtomicExchange) ++facts.atomicExchange64;
+            } else ++facts.atomic32;
         }
         offset += count;
     }
@@ -120,6 +124,7 @@ int main() {
         Check(wave32.atomic64 >= 1u, "the 64-bit GDS add did not emit a native 64-bit atomic (a64=" + std::to_string(wave32.atomic64) + ", a32=" + std::to_string(wave32.atomic32) + ", cx64=" + std::to_string(wave32.atomicCompareExchange64) + ")");
         Check(wave32.atomicCompareExchange64 >= 1u, "the 64-bit GDS compare exchange did not emit a 64-bit compare exchange");
         Check(wave32.atomic32 >= 1u, "the 32-bit GDS min emitted no atomic");
+        Check(wave32.atomicExchange64 >= 2u, "the 64-bit GDS write exchange did not emit the two native 64-bit exchanges");
         const auto wave64 = Inspect(Compile(64));
         Check(wave64.int64AtomicsCapability && wave64.aliasedGds && wave64.atomic64 >= 1u && wave64.atomicCompareExchange64 >= 1u && wave64.atomic32 >= 2u, "wave64 lost the GDS atomics");
         std::puts("gds shader compilation passed");

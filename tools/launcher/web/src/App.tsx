@@ -16,7 +16,6 @@ import { Rail } from "./Row";
 import { BottomBar } from "./BottomBar";
 import { EmptyState } from "./EmptyState";
 import { LaunchOverlay, StoppedScreen } from "./LaunchOverlay";
-import { GamePage } from "./sheets/GamePage";
 import { useGameTint } from "./gameTint";
 import { SettingsPage } from "./sheets/Settings";
 import { GridSheet } from "./sheets/LibraryGrid";
@@ -76,7 +75,7 @@ function Launcher() {
   const [overlay, setOverlay] = useState<Overlay>(null);
   const [gridIndex, setGridIndex] = useState(0);
   const [stopped, setStopped] = useState(false);
-  const [gamePage, setGamePage] = useState<Game | null>(null);
+  const [infoMode, setInfoMode] = useState(false);
   const [tint, applyTint] = useGameTint();
   const [onboarding, setOnboarding] = useState(
     () => window.localStorage.getItem("leonps5-onboarded") !== "done",
@@ -139,30 +138,32 @@ function Launcher() {
 
   const flow = useLaunchFlow(demo, apply, useCallback(() => undefined, []), describeNetworkError);
 
-  const activate = useCallback((game: Game) => {
-    pageOpenedAt.current = Date.now();
-    setGamePage(game);
-    applyTint(game.hasIcon ? iconUrl(game.id) : null);
-  }, [applyTint]);
-
   const pageOpenedAt = useRef(0);
-  const closeGamePage = useCallback(() => {
-    setGamePage(null);
+  const closeInfo = useCallback(() => {
+    setInfoMode(false);
     pageOpenedAt.current = 0;
     applyTint(null);
   }, [applyTint]);
 
-  const playFromPage = useCallback(
+  const activate = useCallback((game: Game) => {
+    pageOpenedAt.current = Date.now();
+    setInfoMode(true);
+    applyTint(game.hasIcon ? iconUrl(game.id) : null);
+  }, [applyTint]);
+
+  const play = useCallback(
     (game: Game) => {
       if (game.demo) {
         toast("Demo titles are samples and do not launch");
         return;
       }
-      closeGamePage();
+      setInfoMode(false);
+      applyTint(null);
       flow.start(game);
     },
-    [closeGamePage, flow, toast],
+    [flow, toast],
   );
+
 
   const [searching, setSearching] = useState(false);
   const openSearch = useCallback(() => {
@@ -228,7 +229,7 @@ function Launcher() {
     anchorRef.current = null;
   }, [filtered, nav]);
 
-  const blocked = overlay !== null || flow.launch !== null || gamePage !== null;
+  const blocked = overlay !== null || flow.launch !== null;
 
   useGamepad(
     {
@@ -245,15 +246,23 @@ function Launcher() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent): void => {
       if (event.target instanceof HTMLInputElement) return;
-      if (gamePage !== null) {
-        if (event.key === "Escape") closeGamePage();
-        else if (event.key === "Enter" && Date.now() - pageOpenedAt.current > 300) playFromPage(gamePage);
+      if (blocked) {
+        if (flow.launch && event.key === "Escape") flow.close();
+        return;
+      }
+      if (event.key === "Escape") {
+        if (searching) nav.handlers.current.back();
+        else if (infoMode) closeInfo();
         else return;
         event.preventDefault();
         return;
       }
-      if (blocked) {
-        if (flow.launch && event.key === "Escape") flow.close();
+      if (event.key === "Enter" && infoMode && nav.row === 1) {
+        if (Date.now() - pageOpenedAt.current > 300) {
+          const selected = filtered[nav.cardIndex];
+          if (selected) play(selected);
+        }
+        event.preventDefault();
         return;
       }
       if (event.key === "ArrowLeft") nav.handlers.current.left();
@@ -261,13 +270,12 @@ function Launcher() {
       else if (event.key === "ArrowUp") nav.handlers.current.up();
       else if (event.key === "ArrowDown") nav.handlers.current.down();
       else if (event.key === "Enter") nav.handlers.current.confirm();
-      else if (event.key === "Escape" && searching) nav.handlers.current.back();
       else return;
       event.preventDefault();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [blocked, gamePage, closeGamePage, playFromPage, searching, flow.launch, flow]);
+  }, [blocked, infoMode, closeInfo, play, filtered, nav, searching, flow.launch, flow]);
 
   if (window.location.pathname === "/gallery") {
     return (
@@ -302,8 +310,8 @@ function Launcher() {
       />
       <Background
         game={!blocked && prefs.backdrop ? selected : null}
-        blur={prefs.backdropBlur}
-        opacity={prefs.backdropOpacity}
+        blur={infoMode ? Math.min(prefs.backdropBlur, 24) : prefs.backdropBlur}
+        opacity={infoMode ? Math.max(prefs.backdropOpacity, 70) : prefs.backdropOpacity}
         waveOpacity={waveOp}
       />
       <TopBar
@@ -348,6 +356,9 @@ function Launcher() {
           gap={prefs.cardGap === "compact" ? 10 : prefs.cardGap === "spacious" ? 28 : 18}
           radius={prefs.cornerRadius}
           shadow={prefs.cardShadow}
+          info={infoMode && !searching}
+          onPlay={play}
+          onOpenFolder={openFolder}
         />
       )}
       <BottomBar
@@ -386,14 +397,6 @@ function Launcher() {
           onSaveDir={saveDir}
           prefs={prefs}
           onPref={setPref}
-        />
-      )}
-      {gamePage !== null && (
-        <GamePage
-          game={gamePage}
-          onClose={closeGamePage}
-          onPlay={playFromPage}
-          onOpenFolder={openFolder}
         />
       )}
       {overlay === "about" && (

@@ -1,5 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { FolderOpen, Play } from "@phosphor-icons/react";
 import { GameArt } from "./Art";
 import { iconUrl, type Game } from "./api";
 import { relativeTime } from "./data";
@@ -62,9 +63,12 @@ type RailProps = {
   gap?: number;
   radius?: number;
   shadow?: boolean;
+  info?: boolean;
+  onPlay?: (game: Game) => void;
+  onOpenFolder?: () => void;
 };
 
-export function Rail({ games, index, searching, onSelect, onActivate, gap: gapProp, radius: radiusProp, shadow }: RailProps) {
+export function Rail({ games, index, searching, onSelect, onActivate, gap: gapProp, radius: radiusProp, shadow, info = false, onPlay, onOpenFolder }: RailProps) {
   const railRef = useRef<HTMLDivElement>(null);
   const GAP = gapProp ?? 18;
   const radius = radiusProp ?? 14;
@@ -83,7 +87,7 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
   const selected = games[index] ?? null;
   const step = cardWidth + GAP;
   const offset = Math.max(0, index * step - LEAD);
-  const titleX = Math.min(LEAD + index * step, LEAD * 2);
+  const titleX = info ? LEAD : Math.min(LEAD + index * step, LEAD * 2);
 
   return (
     <section aria-label="Game rail" className="relative min-h-0 flex-1 overflow-x-clip">
@@ -105,10 +109,48 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
                   ? "Demo title · samples only, nothing launches"
                   : `${selected.folder} · ${relativeTime(selected.lastPlayed)}`}
               </p>
+              {info && (
+                <div className="max-md:max-w-[calc(100vw-5.5rem)]">
+                  <div className="mt-4 flex flex-wrap items-center gap-3">
+                    {selected.demo ? (
+                      <div className="inline-flex h-12 items-center rounded-xl bg-white/5 px-5 text-sm text-muted">
+                        Sample titles do not launch
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onPlay?.(selected)}
+                        className="inline-flex h-12 items-center gap-2.5 rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-transform hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                      >
+                        <Play size={18} weight="bold" />
+                        Play
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onOpenFolder?.()}
+                      className="inline-flex h-12 items-center gap-2 rounded-xl border border-line px-5 text-sm text-text transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    >
+                      <FolderOpen size={16} weight="bold" />
+                      Open folder
+                    </button>
+                  </div>
+                  <p className="mt-4 max-w-prose text-sm leading-relaxed text-text/85">
+                    {selected.description.trim() ||
+                      (selected.demo
+                        ? "Sample art only, nothing launches."
+                        : "No description yet. Add a README.txt or description.txt to the game folder and rescan.")}
+                  </p>
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
-        <div className="absolute inset-x-0 bottom-4 top-24 overflow-hidden max-md:top-20">
+        <div
+          className={`absolute inset-x-0 bottom-4 overflow-hidden transition-[top] duration-200 ease-out ${
+            info ? "top-56 max-md:top-72" : "top-24 max-md:top-20"
+          }`}
+        >
           {games.length > 0 ? (
             <motion.div
               ref={railRef}

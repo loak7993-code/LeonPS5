@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node scripts/fonts.mjs && vite",
     "build": "node scripts/fonts.mjs && tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "postbuild": "python3 ../scripts/ambience.py dist/ambience.wav"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",

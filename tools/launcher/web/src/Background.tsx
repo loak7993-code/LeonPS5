@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "motion/react";
 import { GameArt } from "./Art";
-import { iconUrl, type Game } from "./api";
+import { iconUrl, picUrl, type Game } from "./api";
 
 function Ribbons({ waveOpacity = 100 }: { waveOpacity?: number }) {
   return (
@@ -76,7 +76,15 @@ function ArtBackdrop({ game, blur = 64, opacity = 55 }: BackdropProps) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6, ease: [0.2, 0, 0, 1] }}
         >
-          {game.hasIcon ? (
+          {game.hasPic ? (
+            <img
+              src={picUrl(game.id)}
+              alt=""
+              draggable={false}
+              className="h-full w-full object-cover"
+              style={{ filter: `blur(${Math.round(blur * 0.6)}px) brightness(0.55) saturate(1.2)` }}
+            />
+          ) : game.hasIcon ? (
             <img
               src={iconUrl(game.id)}
               alt=""

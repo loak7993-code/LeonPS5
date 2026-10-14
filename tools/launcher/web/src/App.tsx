@@ -10,6 +10,7 @@ import { useLibraryFilter } from "./state/useLibraryFilter";
 import { useLauncherNav } from "./state/useLauncherNav";
 import { useLaunchFlow } from "./state/useLaunchFlow";
 import { useGamepad } from "./gamepad";
+import * as sounds from "./sounds";
 import { Background } from "./Background";
 import { TopBar } from "./TopBar";
 import { Rail } from "./Row";
@@ -164,6 +165,20 @@ function Launcher() {
     [flow, toast],
   );
 
+  const stop = useCallback(
+    (game: Game) => {
+      api
+        .stopGame(game.id)
+        .then(() => api.loadLibrary(demo))
+        .then((next) => {
+          apply(next);
+          toast(`Stopped ${game.title}`);
+        })
+        .catch((error: unknown) => toast(error instanceof Error ? error.message : String(error)));
+    },
+    [apply, demo, toast],
+  );
+
 
   const [searching, setSearching] = useState(false);
   const openSearch = useCallback(() => {
@@ -171,6 +186,33 @@ function Launcher() {
     window.setTimeout(() => searchRef.current?.focus(), 30);
   }, []);
   const closeSearch = useCallback(() => setSearching(false), []);
+
+  useEffect(() => {
+    sounds.setSoundsEnabled(prefs.sounds);
+  }, [prefs.sounds]);
+
+  useEffect(() => {
+    const connect = (): void => toast("Controller connected");
+    const disconnect = (): void => toast("Controller disconnected");
+    window.addEventListener("gamepadconnected", connect);
+    window.addEventListener("gamepaddisconnected", disconnect);
+    return () => {
+      window.removeEventListener("gamepadconnected", connect);
+      window.removeEventListener("gamepaddisconnected", disconnect);
+    };
+  }, [toast]);
+
+  const anyRunning = library?.games.some((game) => game.running) ?? false;
+  useEffect(() => {
+    if (!anyRunning) return;
+    const id = window.setInterval(() => {
+      api
+        .loadLibrary(demo)
+        .then(apply)
+        .catch(() => undefined);
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, [anyRunning, demo, apply]);
 
   const nav = useLauncherNav({
     filtered,
@@ -199,6 +241,7 @@ function Launcher() {
     const gesture = (): void => {
       setGestured(true);
       unlock();
+      sounds.primeSounds();
     };
     window.addEventListener("pointerdown", gesture, { once: true });
     window.addEventListener("keydown", gesture, { once: true });
@@ -237,8 +280,30 @@ function Launcher() {
       right: () => nav.handlers.current.right(),
       up: () => nav.handlers.current.up(),
       down: () => nav.handlers.current.down(),
-      confirm: () => nav.handlers.current.confirm(),
-      back: () => nav.handlers.current.back(),
+      confirm: () => {
+        if (infoMode) {
+          const selected = filtered[nav.cardIndex];
+          if (selected) play(selected);
+          return;
+        }
+        nav.handlers.current.confirm();
+      },
+      back: () => {
+        if (infoMode) closeInfo();
+        else nav.handlers.current.back();
+      },
+      triangle: openSearch,
+      square: () => {
+        anchorRef.current = filtered[nav.cardIndex]?.id ?? null;
+        toggleSort();
+      },
+      options: () => {
+        setGridIndex(Math.min(nav.cardIndex, Math.max(0, games.length - 1)));
+        setOverlay("grid");
+      },
+      touchpad: () => setOverlay("settings"),
+      l1: () => nav.handlers.current.jump(-5),
+      r1: () => nav.handlers.current.jump(5),
     },
     !blocked && !searching,
   );
@@ -362,6 +427,7 @@ function Launcher() {
           shadow={prefs.cardShadow}
           info={infoMode && !searching}
           onPlay={play}
+          onStop={stop}
           onOpenFolder={openFolder}
         />
       )}

@@ -1,8 +1,9 @@
 import { motion } from "motion/react";
 import { XCircle } from "@phosphor-icons/react";
+import { GameArt } from "./Art";
 import { Button } from "./ui/Button";
 import { Progress } from "./ui/Progress";
-import type { Game } from "./api";
+import { iconUrl, picUrl, type Game } from "./api";
 
 export type LaunchPhase = "starting" | "running" | "error";
 
@@ -31,7 +32,7 @@ export function LaunchOverlay({ game, phase, error, command, onRetry, onClose }:
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.98 }}
         transition={{ type: "spring", stiffness: 320, damping: 28 }}
-        className="w-full max-w-sm rounded-2xl border border-line bg-panel p-8 text-center"
+        className="w-full max-w-md rounded-2xl border border-line bg-panel p-8 text-center"
       >
         {phase === "error" ? (
           <>
@@ -47,18 +48,47 @@ export function LaunchOverlay({ game, phase, error, command, onRetry, onClose }:
           </>
         ) : (
           <>
-            <div className="mx-auto w-10">
-              {phase === "starting" ? (
-                <span className="flex h-10 items-center justify-center">
-                  <span className="block h-2 w-2 rounded-full bg-accent" />
-                </span>
+            <div className="relative mx-auto h-28 w-28">
+              <div
+                aria-hidden
+                className="absolute -inset-4 rounded-[32px]"
+                style={{
+                  background:
+                    "radial-gradient(closest-side, color-mix(in oklab, var(--color-accent) 28%, transparent), transparent)",
+                }}
+              />
+              {game.hasPic ? (
+                <motion.img
+                  src={picUrl(game.id)}
+                  alt=""
+                  draggable={false}
+                  className="relative h-28 w-28 rounded-2xl object-cover shadow-2xl shadow-black/50"
+                  initial={{ opacity: 0, scale: 0.82 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.45, ease: [0.2, 0, 0, 1] }}
+                />
+              ) : game.hasIcon ? (
+                <motion.img
+                  src={iconUrl(game.id)}
+                  alt=""
+                  draggable={false}
+                  className="relative h-28 w-28 rounded-2xl object-cover shadow-2xl shadow-black/50"
+                  initial={{ opacity: 0, scale: 0.82 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.45, ease: [0.2, 0, 0, 1] }}
+                />
               ) : (
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/20 font-mono text-sm font-bold text-accent">
-                  OK
-                </span>
+                <motion.div
+                  className="relative h-28 w-28 overflow-hidden rounded-2xl shadow-2xl shadow-black/50"
+                  initial={{ opacity: 0, scale: 0.82 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.45, ease: [0.2, 0, 0, 1] }}
+                >
+                  <GameArt id={game.id} title={game.title} className="h-full w-full" />
+                </motion.div>
               )}
             </div>
-            <h2 className="mt-4 text-lg font-semibold">
+            <h2 className="mt-5 text-lg font-semibold">
               {phase === "starting" ? `Starting ${game.title}` : "Running in the background"}
             </h2>
             <p className="mt-2 text-sm text-muted">

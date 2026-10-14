@@ -3,7 +3,12 @@ export type Game = {
   folder: string;
   title: string;
   hasIcon: boolean;
+  hasPic: boolean;
   lastPlayed: string | null;
+  minutes: number;
+  launches: number;
+  daily: number[];
+  running: boolean;
   demo: boolean;
   description: string;
 };
@@ -78,4 +83,16 @@ export function quitLauncher(): Promise<{ ok: boolean }> {
 
 export function iconUrl(id: string): string {
   return `/api/icon/${encodeURIComponent(id)}`;
+}
+
+export function picUrl(id: string): string {
+  return `/api/pic/${encodeURIComponent(id)}`;
+}
+
+export function stopGame(id: string): Promise<{ status: string }> {
+  return fetch("/api/stop", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ id }),
+  }).then((r) => parse<{ status: string }>(r));
 }

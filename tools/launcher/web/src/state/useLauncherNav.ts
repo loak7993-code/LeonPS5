@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { Game } from "../api";
+import { back as backSound, confirm as confirmSound, tick as tickSound } from "../sounds";
 import type { NavHandlers } from "./navigation";
 
 export type NavArgs = {
@@ -30,6 +31,7 @@ const NO_NAV: NavHandlers = {
   right() {},
   up() {},
   down() {},
+  jump() {},
   confirm() {},
   back() {},
 };
@@ -54,22 +56,61 @@ export function useLauncherNav({
 
   handlers.current = {
     left() {
-      if (row === 0) setTopIndex((index) => Math.max(0, index - 1));
-      else if (row === 1) setCardIndex((index) => Math.max(0, index - 1));
-      else setBottomIndex((index) => Math.max(0, index - 1));
+      if (row === 0) {
+        if (topIndex > 0) {
+          setTopIndex((index) => Math.max(0, index - 1));
+          tickSound();
+        }
+      } else if (row === 1) {
+        if (cardIndex > 0) {
+          setCardIndex((index) => Math.max(0, index - 1));
+          tickSound();
+        }
+      } else if (bottomIndex > 0) {
+        setBottomIndex((index) => Math.max(0, index - 1));
+        tickSound();
+      }
     },
     right() {
-      if (row === 0) setTopIndex((index) => Math.min(TOP_COUNT - 1, index + 1));
-      else if (row === 1) setCardIndex((index) => Math.min(filtered.length - 1, index + 1));
-      else setBottomIndex((index) => Math.min(BOTTOM_COUNT - 1, index + 1));
+      if (row === 0) {
+        if (topIndex < TOP_COUNT - 1) {
+          setTopIndex((index) => Math.min(TOP_COUNT - 1, index + 1));
+          tickSound();
+        }
+      } else if (row === 1) {
+        if (cardIndex < filtered.length - 1) {
+          setCardIndex((index) => Math.min(filtered.length - 1, index + 1));
+          tickSound();
+        }
+      } else if (bottomIndex < BOTTOM_COUNT - 1) {
+        setBottomIndex((index) => Math.min(BOTTOM_COUNT - 1, index + 1));
+        tickSound();
+      }
     },
     up() {
-      setRow((current) => Math.max(0, current - 1));
+      setRow((current) => {
+        const next = Math.max(0, current - 1);
+        if (next !== current) tickSound();
+        return next;
+      });
     },
     down() {
-      setRow((current) => Math.min(2, current + 1));
+      setRow((current) => {
+        const next = Math.min(2, current + 1);
+        if (next !== current) tickSound();
+        return next;
+      });
+    },
+    jump(delta) {
+      if (row !== 1 || filtered.length === 0) return;
+      const next = Math.max(0, Math.min(filtered.length - 1, cardIndex + delta));
+      if (next !== cardIndex) {
+        setCardIndex(next);
+        tickSound();
+      }
     },
     confirm() {
+      confirmSound();
       if (row === 0) onTopConfirm(topIndex);
       else if (row === 1) {
         const selected = filtered[cardIndex];
@@ -77,7 +118,10 @@ export function useLauncherNav({
       } else onBottomConfirm(bottomIndex);
     },
     back() {
-      if (searching) onBack();
+      if (searching) {
+        backSound();
+        onBack();
+      }
     },
   };
 

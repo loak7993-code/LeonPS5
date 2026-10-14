@@ -174,6 +174,121 @@ class ServerTests(unittest.TestCase):
         log = self.games / ".leonps5-launcher" / "run.log"
         self.assertTrue(log.is_file())
 
+    def test_pic_serves_png_and_404s(self):
+        folder = make_game(self.games, "alpha", "Alpha Strike", icon=True)
+        (folder / "sce_sys" / "pic1.png").write_bytes(tiny_png((60, 50, 40)))
+        fixture = self.spawn()
+        with urllib.request.urlopen(f"http://127.0.0.1:{fixture.port}/api/pic/alpha") as response:
+            self.assertEqual(response.status, 200)
+            self.assertEqual(response.headers["Content-Type"], "image/png")
+            self.assertEqual(response.read()[:4], b"\x89PNG")
+        status, _ = fixture.get("/api/pic/beta")
+        self.assertEqual(status, 404)
+        status, _ = fixture.get("/api/pic/../escape")
+        self.assertEqual(status, 404)
+        _, payload = fixture.get("/api/games")
+        alpha = next(item for item in payload["games"] if item["id"] == "alpha")
+        self.assertTrue(alpha["hasPic"])
+        beta = next(item for item in payload["games"] if item["id"] == "beta")
+        self.assertFalse(beta["hasPic"])
+
+    def test_payload_carries_playtime_and_running_fields(self):
+        fixture = self.spawn()
+        _, payload = fixture.get("/api/games")
+        for item in payload["games"]:
+            self.assertEqual(item["minutes"], 0.0)
+            self.assertEqual(item["launches"], 0)
+            self.assertEqual(len(item["daily"]), 7)
+            self.assertFalse(item["running"])
+        _, demo = fixture.get("/api/games?demo=1")
+        for item in demo["games"]:
+            self.assertIn("minutes", item)
+            self.assertIn("launches", item)
+            self.assertIn("daily", item)
+            self.assertIn("running", item)
+
+    def test_state_migration_keeps_old_stamps(self):
+        state_dir = self.games / ".leonps5-launcher"
+        state_dir.mkdir(parents=True, exist_ok=True)
+        (state_dir / "state.json").write_text(
+            json.dumps({"alpha": "2026-01-02T03:04:05Z"}), encoding="utf-8"
+        )
+        fixture = self.spawn()
+        _, payload = fixture.get("/api/games")
+        alpha = next(item for item in payload["games"] if item["id"] == "alpha")
+        self.assertEqual(alpha["lastPlayed"], "2026-01-02T03:04:05Z")
+        self.assertEqual(alpha["launches"], 0)
+        self.assertEqual(alpha["minutes"], 0.0)
+
+    def test_stop_rejects_unknown_and_idle_titles(self):
+        fixture = self.spawn()
+        status, body = fixture.post("/api/stop", {"id": "alpha"})
+        self.assertEqual(status, 409)
+        self.assertIn("not running", body["error"])
+        status, body = fixture.post("/api/stop", {"id": "demo-aurora-drift"})
+        self.assertEqual(status, 409)
+        self.assertIn("samples", body["error"])
+        status, body = fixture.post("/api/stop", {})
+        self.assertEqual(status, 400)
+
+    def test_launch_accumulates_playtime_on_exit(self):
+        script = self.root / "sleepy-runner.sh"
+        script.write_text("#!/bin/sh\nsleep 1.2\n", encoding="utf-8")
+        script.chmod(0o755)
+        fixture = self.spawn(runner=script)
+        status, _ = fixture.post("/api/launch", {"id": "alpha"})
+        self.assertEqual(status, 200)
+        deadline = time.time() + 5.0
+        running = False
+        while time.time() < deadline:
+            _, payload = fixture.get("/api/games")
+            alpha = next(item for item in payload["games"] if item["id"] == "alpha")
+            if alpha["running"]:
+                running = True
+                break
+            time.sleep(0.1)
+        self.assertTrue(running)
+        deadline = time.time() + 8.0
+        while time.time() < deadline:
+            _, payload = fixture.get("/api/games")
+            alpha = next(item for item in payload["games"] if item["id"] == "alpha")
+            if not alpha["running"]:
+                break
+            time.sleep(0.2)
+        self.assertFalse(alpha["running"])
+        self.assertGreaterEqual(alpha["minutes"], 0.01)
+        self.assertEqual(alpha["launches"], 1)
+        self.assertGreater(max(alpha["daily"]), 0)
+
+    def test_stop_ends_session_and_records_time(self):
+        script = self.root / "long-runner.sh"
+        script.write_text("#!/bin/sh\nsleep 60\n", encoding="utf-8")
+        script.chmod(0o755)
+        fixture = self.spawn(runner=script)
+        status, _ = fixture.post("/api/launch", {"id": "alpha"})
+        self.assertEqual(status, 200)
+        deadline = time.time() + 5.0
+        while time.time() < deadline:
+            _, payload = fixture.get("/api/games")
+            alpha = next(item for item in payload["games"] if item["id"] == "alpha")
+            if alpha["running"]:
+                break
+            time.sleep(0.1)
+        self.assertTrue(alpha["running"])
+        status, body = fixture.post("/api/stop", {"id": "alpha"})
+        self.assertEqual(status, 200)
+        self.assertEqual(body["status"], "stopping")
+        deadline = time.time() + 8.0
+        while time.time() < deadline:
+            _, payload = fixture.get("/api/games")
+            alpha = next(item for item in payload["games"] if item["id"] == "alpha")
+            if not alpha["running"]:
+                break
+            time.sleep(0.2)
+        self.assertFalse(alpha["running"])
+        self.assertGreaterEqual(alpha["minutes"], 0.0)
+        self.assertEqual(alpha["launches"], 1)
+
     def test_scan_picks_up_new_games(self):
         fixture = self.spawn()
         _, before = fixture.get("/api/games")

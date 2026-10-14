@@ -3,6 +3,7 @@ import json
 import os
 import platform
 import shutil
+import signal
 import subprocess
 import sys
 import threading
@@ -14,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-VERSION = "0.1.0"
+VERSION = "0.2.0"
 GAME_MARKERS = ("sce_module", "sce_modules", "prx")
 DEMO_TITLES = [
     "Aurora Drift",
@@ -40,6 +41,45 @@ MIME = {
 
 class LaunchError(Exception):
     pass
+
+
+PIC_NAMES = ("PIC1.PNG", "pic1.png", "PIC1.png", "pic1.PNG")
+DAILY_KEEP = 90
+DAILY_SPAN = 7
+
+
+def empty_stats():
+    return {"lastPlayed": None, "minutes": 0.0, "launches": 0, "daily": {}}
+
+
+def normalize_stats(value):
+    if isinstance(value, str):
+        return {"lastPlayed": value or None, "minutes": 0.0, "launches": 0, "daily": {}}
+    if not isinstance(value, dict):
+        return empty_stats()
+    daily = {}
+    raw = value.get("daily")
+    if isinstance(raw, dict):
+        for key, item in list(raw.items())[-DAILY_KEEP:]:
+            if isinstance(key, str) and len(key) == 10 and isinstance(item, (int, float)) and item >= 0:
+                daily[key] = round(float(item), 2)
+    minutes = value.get("minutes")
+    launches = value.get("launches")
+    last = value.get("lastPlayed")
+    return {
+        "lastPlayed": str(last) if isinstance(last, str) and last else None,
+        "minutes": float(minutes) if isinstance(minutes, (int, float)) and minutes >= 0 else 0.0,
+        "launches": int(launches) if isinstance(launches, int) and launches >= 0 else 0,
+        "daily": daily,
+    }
+
+
+def daily_series(daily, span=DAILY_SPAN):
+    now = time.time()
+    return [
+        round(daily.get(time.strftime("%Y-%m-%d", time.localtime(now - offset * 86400)), 0.0), 2)
+        for offset in range(span - 1, -1, -1)
+    ]
 
 
 def config_path():
@@ -128,7 +168,12 @@ def demo_games():
             "folder": f"sample-{position + 1}",
             "title": title,
             "hasIcon": False,
+            "hasPic": False,
             "lastPlayed": None,
+            "minutes": 0.0,
+            "launches": 0,
+            "daily": [0.0] * DAILY_SPAN,
+            "running": False,
             "demo": True,
             "description": f"Sample title {position + 1} of {len(DEMO_TITLES)}. Sample art only, nothing launches.",
         }
@@ -173,7 +218,8 @@ class Library:
         self.extra_args = []
         self.lock = threading.Lock()
         self.games = []
-        self.played = {}
+        self.stats = {}
+        self.running = {}
         self.suggestions_cache = suggestions()
         self.load_state()
         self.scan()
@@ -183,7 +229,8 @@ class Library:
         path.mkdir(parents=True, exist_ok=True)
         with self.lock:
             self.games_dir = path
-            self.played = {}
+            self.stats = {}
+            self.running = {}
         self.suggestions_cache = suggestions()
         self.load_state()
         self.scan()
@@ -201,12 +248,12 @@ class Library:
         except (OSError, ValueError):
             data = {}
         if isinstance(data, dict):
-            self.played = {str(key): str(value) for key, value in data.items()}
+            self.stats = {str(key): normalize_stats(value) for key, value in data.items()}
 
     def save_state(self):
         try:
             self.state_path().parent.mkdir(parents=True, exist_ok=True)
-            self.state_path().write_text(json.dumps(self.played, indent=1), encoding="utf-8")
+            self.state_path().write_text(json.dumps(self.stats, indent=1, sort_keys=True), encoding="utf-8")
         except OSError:
             pass
 
@@ -238,7 +285,12 @@ class Library:
                     "folder": entry.name,
                     "title": self.title_for(entry),
                     "hasIcon": (entry / "sce_sys" / "icon0.png").is_file(),
-                    "lastPlayed": self.played.get(entry.name),
+                    "hasPic": any(
+                        (entry / base / name).is_file()
+                        for base in ("sce_sys", ".")
+                        for name in PIC_NAMES
+                    ),
+                    "lastPlayed": self.stats.get(entry.name, empty_stats())["lastPlayed"],
                     "demo": False,
                     "description": read_description(entry),
                 }
@@ -248,7 +300,19 @@ class Library:
 
     def payload(self, demo=False):
         with self.lock:
-            games = [dict(item, lastPlayed=self.played.get(item["id"])) for item in self.games]
+            games = []
+            for item in self.games:
+                stats = self.stats.get(item["id"], empty_stats())
+                games.append(
+                    dict(
+                        item,
+                        lastPlayed=stats["lastPlayed"],
+                        minutes=round(stats["minutes"], 2),
+                        launches=stats["launches"],
+                        daily=daily_series(stats["daily"]),
+                        running=item["id"] in self.running,
+                    )
+                )
             extra = list(self.extra_args)
             cached_suggestions = self.suggestions_cache
         if demo:
@@ -320,10 +384,54 @@ class Library:
                 log.close()
         stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         with self.lock:
-            self.played[game_id] = stamp
+            stats = self.stats.setdefault(game_id, empty_stats())
+            stats["lastPlayed"] = stamp
+            stats["launches"] += 1
+            self.running[game_id] = {"process": process, "started": time.monotonic()}
         self.save_state()
+        threading.Thread(target=self.watch_session, args=(game_id, process), daemon=True).start()
         parts = [Path(self.runner).name, *self.extra_args, game["folder"]]
         return {"status": "started", "command": " ".join(parts)}
+
+    def watch_session(self, game_id, process):
+        process.wait()
+        with self.lock:
+            session = self.running.pop(game_id, None)
+            if session is None:
+                return
+            minutes = max(0.0, (time.monotonic() - session["started"]) / 60.0)
+            stats = self.stats.setdefault(game_id, empty_stats())
+            stats["minutes"] += minutes
+            today = time.strftime("%Y-%m-%d")
+            stats["daily"][today] = round(stats["daily"].get(today, 0.0) + minutes, 2)
+            if len(stats["daily"]) > DAILY_KEEP:
+                for key in sorted(stats["daily"])[:-DAILY_KEEP]:
+                    del stats["daily"][key]
+        self.save_state()
+
+    def stop(self, game_id):
+        if game_id.startswith("demo-"):
+            raise LaunchError("Demo titles are samples and do not launch")
+        with self.lock:
+            session = self.running.get(game_id)
+            if session is None:
+                raise LaunchError("That title is not running")
+            process = session["process"]
+        try:
+            os.killpg(process.pid, signal.SIGTERM)
+        except OSError:
+            pass
+
+        def force():
+            time.sleep(3.0)
+            if process.poll() is None:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except OSError:
+                    pass
+
+        threading.Thread(target=force, daemon=True).start()
+        return {"status": "stopping"}
 
 
 POST_ROUTES = {
@@ -331,6 +439,7 @@ POST_ROUTES = {
     "/api/launch": "post_launch",
     "/api/config": "post_config",
     "/api/open-folder": "post_open_folder",
+    "/api/stop": "post_stop",
     "/api/quit": "post_quit",
     "/api/setup/install": "post_setup_install",
 }
@@ -377,7 +486,10 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(setup_status(self.web_dir, self.web_source))
             return
         if parsed.path.startswith("/api/icon/"):
-            self.send_icon(unquote(parsed.path[len("/api/icon/") :]))
+            self.send_art(unquote(parsed.path[len("/api/icon/") :]), ("icon0.png",))
+            return
+        if parsed.path.startswith("/api/pic/"):
+            self.send_art(unquote(parsed.path[len("/api/pic/") :]), PIC_NAMES)
             return
         self.send_static(parsed.path)
 
@@ -404,6 +516,19 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             self.send_json(self.library.launch(game_id))
+        except LaunchError as error:
+            self.send_json({"error": str(error)}, 409)
+        except Exception as error:
+            self.send_json({"error": f"Launcher error: {error}"}, 500)
+
+    def post_stop(self):
+        body = self.read_json()
+        game_id = str(body.get("id", "")) if isinstance(body, dict) else ""
+        if not game_id:
+            self.send_json({"error": "Missing title id"}, 400)
+            return
+        try:
+            self.send_json(self.library.stop(game_id))
         except LaunchError as error:
             self.send_json({"error": str(error)}, 409)
         except Exception as error:
@@ -441,25 +566,26 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json({"ok": True})
         threading.Timer(0.3, self.server_ref.shutdown).start()
 
-    def send_icon(self, game_id):
+    def send_art(self, game_id, names):
         if not game_id or game_id in (".", "..") or "/" in game_id or "\\" in game_id:
             self.send_json({"error": "Unknown title"}, 404)
             return
-        icon = self.library.games_dir / game_id / "sce_sys" / "icon0.png"
-        if not icon.is_file():
-            self.send_json({"error": "No icon"}, 404)
+        for name in names:
+            candidate = self.library.games_dir / game_id / "sce_sys" / name
+            if not candidate.is_file():
+                continue
+            try:
+                data = candidate.read_bytes()
+            except OSError:
+                continue
+            self.send_response(200)
+            self.send_header("Content-Type", "image/png")
+            self.send_header("Content-Length", str(len(data)))
+            self.send_header("Cache-Control", "max-age=300")
+            self.end_headers()
+            self.wfile.write(data)
             return
-        try:
-            data = icon.read_bytes()
-        except OSError:
-            self.send_json({"error": "No icon"}, 404)
-            return
-        self.send_response(200)
-        self.send_header("Content-Type", "image/png")
-        self.send_header("Content-Length", str(len(data)))
-        self.send_header("Cache-Control", "max-age=300")
-        self.end_headers()
-        self.wfile.write(data)
+        self.send_json({"error": "No icon"}, 404)
 
     def send_static(self, path):
         web = self.web_dir

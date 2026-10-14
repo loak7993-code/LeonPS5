@@ -1,8 +1,8 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { FolderOpen, Play } from "@phosphor-icons/react";
+import { FolderOpen, Play, Stop } from "@phosphor-icons/react";
 import { GameArt } from "./Art";
-import { iconUrl, type Game } from "./api";
+import { iconUrl, picUrl, type Game } from "./api";
 import { relativeTime } from "./data";
 
 const LEAD = 72;
@@ -37,9 +37,44 @@ const Card = memo(function Card({ game, selected, onSelect, onActivate, radius, 
       ) : (
         <GameArt id={game.id} title={game.title} className="absolute inset-0 h-full w-full" />
       )}
+      {game.running && (
+        <span aria-label="Running now" className="absolute bottom-2 right-2 flex h-3 w-3">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+          <span className="relative inline-flex h-3 w-3 rounded-full bg-accent ring-2 ring-black/50" />
+        </span>
+      )}
     </motion.button>
   );
 });
+
+function PlayStats({ game }: { game: Game }) {
+  if (game.launches === 0 && game.minutes <= 0) return null;
+  const total =
+    game.minutes >= 120 ? `${(Math.round((game.minutes / 60) * 10) / 10).toFixed(1)} h` : `${Math.round(game.minutes)} min`;
+  const peak = Math.max(...game.daily, 0.5);
+  return (
+    <div className="mt-4 flex items-end gap-5">
+      <div>
+        <div className="font-mono text-sm font-semibold text-text">{total}</div>
+        <div className="text-[11px] text-muted">played</div>
+      </div>
+      <div>
+        <div className="font-mono text-sm font-semibold text-text">{game.launches}</div>
+        <div className="text-[11px] text-muted">launches</div>
+      </div>
+      <div className="flex h-8 items-end gap-[3px]" role="img" aria-label="Play time over the last seven days">
+        {game.daily.map((minutes, index) => (
+          <div
+            key={index}
+            className="w-[7px] rounded-[2px] bg-accent/75"
+            style={{ height: `${Math.max(3, Math.round((minutes / peak) * 100))}%` }}
+          />
+        ))}
+      </div>
+      <div className="pb-0.5 text-[11px] text-muted">7 days</div>
+    </div>
+  );
+}
 
 function useCardWidth(railRef: React.RefObject<HTMLDivElement | null>, count: number): number {
   const [cardWidth, setCardWidth] = useState(216);
@@ -112,10 +147,11 @@ type RailProps = {
   shadow?: boolean;
   info?: boolean;
   onPlay?: (game: Game) => void;
+  onStop?: (game: Game) => void;
   onOpenFolder?: () => void;
 };
 
-export function Rail({ games, index, searching, onSelect, onActivate, gap: gapProp, radius: radiusProp, shadow, info = false, onPlay, onOpenFolder }: RailProps) {
+export function Rail({ games, index, searching, onSelect, onActivate, gap: gapProp, radius: radiusProp, shadow, info = false, onPlay, onStop, onOpenFolder }: RailProps) {
   const railRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLElement>(null);
   const GAP = gapProp ?? 18;
@@ -171,36 +207,77 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
               animate={{ opacity: 1, y: 0, transition: { duration: 0.22, ease: "easeOut" } }}
               exit={{ opacity: 0, y: 8, transition: { duration: 0.14, ease: "easeIn" } }}
             >
-              <div className="flex flex-wrap items-center gap-3">
-                {selected.demo ? (
-                  <div className="inline-flex h-12 items-center rounded-xl bg-white/5 px-5 text-sm text-muted">
-                    Sample titles do not launch
+              <div className="relative w-[min(560px,calc(100vw-9rem))] max-md:w-[calc(100vw-7.5rem)] overflow-hidden rounded-[18px] border border-white/10 bg-panel/60 backdrop-blur-md">
+                <div aria-hidden className="absolute inset-0">
+                  {selected.hasPic ? (
+                    <img
+                      src={picUrl(selected.id)}
+                      alt=""
+                      draggable={false}
+                      className="h-full w-full object-cover opacity-55"
+                    />
+                  ) : selected.hasIcon ? (
+                    <img
+                      src={iconUrl(selected.id)}
+                      alt=""
+                      draggable={false}
+                      className="h-full w-full scale-110 object-cover opacity-30"
+                      style={{ filter: "blur(14px) saturate(1.2)" }}
+                    />
+                  ) : (
+                    <GameArt id={selected.id} title={selected.title} className="h-full w-full opacity-40" />
+                  )}
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background:
+                        "linear-gradient(180deg, rgba(5,8,20,0.6) 0%, rgba(5,8,20,0.28) 36%, rgba(5,8,20,0.9) 100%)",
+                    }}
+                  />
+                </div>
+                <div className="relative p-5">
+                  <div className="flex flex-wrap items-center gap-3">
+                    {selected.demo ? (
+                      <div className="inline-flex h-12 items-center rounded-xl bg-white/10 px-5 text-sm text-muted">
+                        Sample titles do not launch
+                      </div>
+                    ) : selected.running ? (
+                      <button
+                        type="button"
+                        onClick={() => onStop?.(selected)}
+                        className="inline-flex h-12 items-center gap-2.5 rounded-xl bg-danger px-6 text-sm font-semibold text-canvas transition-transform hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
+                      >
+                        <Stop size={18} weight="bold" />
+                        Stop
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => onPlay?.(selected)}
+                        className="inline-flex h-12 items-center gap-2.5 rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-transform hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                      >
+                        <Play size={18} weight="bold" />
+                        Play
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => onOpenFolder?.()}
+                      className="inline-flex h-12 items-center gap-2 rounded-xl border border-line bg-black/20 px-5 text-sm text-text transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                    >
+                      <FolderOpen size={16} weight="bold" />
+                      Open folder
+                    </button>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => onPlay?.(selected)}
-                    className="inline-flex h-12 items-center gap-2.5 rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-transform hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                  >
-                    <Play size={18} weight="bold" />
-                    Play
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => onOpenFolder?.()}
-                  className="inline-flex h-12 items-center gap-2 rounded-xl border border-line px-5 text-sm text-text transition-colors hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                >
-                  <FolderOpen size={16} weight="bold" />
-                  Open folder
-                </button>
+                  <p className="mt-3 max-w-prose text-sm leading-relaxed text-text/90">
+                    {selected.description.trim() ||
+                      (selected.demo
+                        ? "Sample art only, nothing launches."
+                        : "No description yet. Add a README.txt or description.txt to the game folder and rescan.")}
+                  </p>
+                  {!selected.demo && <PlayStats game={selected} />}
+                </div>
               </div>
-              <p className="mt-3 max-w-prose text-sm leading-relaxed text-text/85 max-md:max-w-[calc(100vw-10.5rem)]">
-                {selected.description.trim() ||
-                  (selected.demo
-                    ? "Sample art only, nothing launches."
-                    : "No description yet. Add a README.txt or description.txt to the game folder and rescan.")}
-              </p>
             </motion.div>
           )}
         </AnimatePresence>

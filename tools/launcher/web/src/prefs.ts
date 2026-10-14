@@ -13,6 +13,7 @@ export type Prefs = {
   backdropOpacity: number;
   music: boolean;
   musicVolume: number;
+  sounds: boolean;
   cardGap: "compact" | "normal" | "spacious";
   waveSpeed: number;
   glowIntensity: number;
@@ -55,6 +56,7 @@ const DEFAULTS: Prefs = {
   backdropOpacity: 55,
   music: true,
   musicVolume: 40,
+  sounds: true,
   cardGap: "normal",
   waveSpeed: 1,
   glowIntensity: 50,
@@ -88,6 +90,7 @@ function read(): Prefs {
           ? Math.max(10, Math.min(90, parsed.backdropOpacity))
           : 55,
       music: parsed.music !== false,
+      sounds: parsed.sounds !== false,
       musicVolume:
         typeof parsed.musicVolume === "number"
           ? Math.max(0, Math.min(100, parsed.musicVolume))

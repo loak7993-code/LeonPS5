@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as api from "../api";
 import type { Game, Library } from "../api";
+import { buzz, chime } from "../sounds";
 import type { LaunchPhase } from "../LaunchOverlay";
 
 export type LaunchState = {
@@ -43,6 +44,7 @@ export function useLaunchFlow(
       api
         .launchGame(game.id)
         .then((result) => {
+          chime();
           setLaunch({ game, phase: "running", error: null, command: result.command });
           api
             .loadLibrary(demo)
@@ -57,6 +59,7 @@ export function useLaunchFlow(
           }, AUTO_CLOSE_MS);
         })
         .catch((error: unknown) => {
+          buzz();
           const message = error instanceof Error ? error.message : String(error);
           setLaunch({
             game,

@@ -235,6 +235,13 @@ export function SettingsPage({
                   onChange={(on) => onPref("backdrop", on)}
                 />
               </SettingsRow>
+              <SettingsRow label="UI sounds" hint="Navigation ticks and launch chimes">
+                <Switch
+                  label="UI sounds"
+                  checked={prefs.sounds}
+                  onChange={(on) => onPref("sounds", on)}
+                />
+              </SettingsRow>
               <SettingsRow
                 label="Accent glow haze"
                 hint="Faint luminous glow in the screen corners, tinted by the accent"

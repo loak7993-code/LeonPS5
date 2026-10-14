@@ -11,7 +11,7 @@ export type LibraryData = {
   apply: (next: Library) => void;
 };
 
-export function useLauncherData(demo: boolean): LibraryData {
+export function useLauncherData(): LibraryData {
   const [library, setLibrary] = useState<Library | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const mounted = useRef(true);
@@ -25,7 +25,7 @@ export function useLauncherData(demo: boolean): LibraryData {
 
   const fetchOnce = useCallback(async (): Promise<Library> => {
     const attempt = (delay: number): Promise<Library> =>
-      api.loadLibrary(demo).catch((error: unknown) => {
+      api.loadLibrary().catch((error: unknown) => {
         if (delay === 0) throw error;
         return new Promise<Library>((resolve, reject) => {
           window.setTimeout(() => {
@@ -34,7 +34,7 @@ export function useLauncherData(demo: boolean): LibraryData {
         });
       });
     return attempt(RETRY_DELAY_MS);
-  }, [demo]);
+  }, []);
 
   useEffect(() => {
     fetchOnce()
@@ -68,7 +68,7 @@ export function useLauncherData(demo: boolean): LibraryData {
   useEffect(() => {
     const id = window.setInterval(() => {
       api
-        .loadLibrary(false)
+        .loadLibrary()
         .then((next) => {
           setLibrary((current) => (current && JSON.stringify(current) === JSON.stringify(next) ? current : next));
         })

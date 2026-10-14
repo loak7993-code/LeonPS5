@@ -173,7 +173,7 @@ export function Onboarding({ library, onSaveDir, onDemo, onClose }: OnboardingPr
                     onClose();
                   }}
                 >
-                  Explore with demo titles
+                  Browse the showcase
                 </Button>
                 <Button data-autofocus icon={<FolderOpen size={16} weight="bold" />} onClick={onClose}>
                   Open the home screen

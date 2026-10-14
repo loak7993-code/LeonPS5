@@ -92,7 +92,7 @@ function Launcher() {
   const searchRef = useRef<HTMLInputElement>(null);
   const anchorRef = useRef<string | null>(null);
 
-  const { library, loadError, reload, apply } = useLauncherData(false);
+  const { library, loadError, reload, apply } = useLauncherData();
 
   const games = useMemo(() => library?.games ?? [], [library]);
   const showcaseEntries = useMemo(
@@ -112,7 +112,6 @@ function Launcher() {
         launches: 0,
         daily: [0, 0, 0, 0, 0, 0, 0],
         running: false,
-        demo: false,
         description: entry.description,
         artUrl: entry.art,
         showcase: true,
@@ -148,7 +147,7 @@ function Launcher() {
 
   const rescan = useCallback(() => {
     api
-      .rescan(false)
+      .rescan()
       .then((next) => {
         apply(next);
         toast(`Library scanned: ${next.games.length} title${next.games.length === 1 ? "" : "s"}`);
@@ -169,7 +168,7 @@ function Launcher() {
     [],
   );
 
-  const flow = useLaunchFlow(false, apply, useCallback(() => undefined, []), describeNetworkError);
+  const flow = useLaunchFlow(apply, useCallback(() => undefined, []), describeNetworkError);
 
   const pageOpenedAt = useRef(0);
   const closeInfo = useCallback(() => {
@@ -186,10 +185,6 @@ function Launcher() {
 
   const play = useCallback(
     (game: Game) => {
-      if (game.demo) {
-        toast("Demo titles are samples and do not launch");
-        return;
-      }
       if (game.showcase && !game.installed) {
         toast("Not installed. Showcase titles are browse-only.");
         return;
@@ -234,7 +229,7 @@ function Launcher() {
     (game: Game) => {
       api
         .stopGame(game.id)
-        .then(() => api.loadLibrary(false))
+        .then(() => api.loadLibrary())
         .then((next) => {
           apply(next);
           toast(`Stopped ${game.title}`);

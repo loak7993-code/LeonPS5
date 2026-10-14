@@ -115,7 +115,6 @@ class ServerTests(unittest.TestCase):
         alpha = next(item for item in payload["games"] if item["id"] == "alpha")
         self.assertEqual(alpha["title"], "Alpha Strike")
         self.assertTrue(alpha["hasIcon"])
-        self.assertFalse(alpha["demo"])
         self.assertIsNone(alpha["lastPlayed"])
         self.assertIn("version", payload)
         self.assertEqual(alpha["description"], "Alpha readme line one. Alpha readme line two.")
@@ -129,13 +128,6 @@ class ServerTests(unittest.TestCase):
         gamma = next(item for item in payload["games"] if item["id"] == "gamma")
         self.assertEqual(len(gamma["description"]), 299)
         self.assertTrue(gamma["description"].endswith("word"))
-
-    def test_demo_payload_replaces_games(self):
-        fixture = self.spawn()
-        status, payload = fixture.get("/api/games?demo=1")
-        self.assertEqual(status, 200)
-        self.assertEqual(len(payload["games"]), len(server.DEMO_TITLES))
-        self.assertTrue(all(item["demo"] for item in payload["games"]))
 
     def test_icon_serves_png_and_404s(self):
         fixture = self.spawn()
@@ -156,9 +148,6 @@ class ServerTests(unittest.TestCase):
         status, body = fixture.post("/api/launch", {"id": "missing"})
         self.assertEqual(status, 409)
         self.assertIn("Unknown title", body["error"])
-        status, body = fixture.post("/api/launch", {"id": "demo-aurora-drift"})
-        self.assertEqual(status, 409)
-        self.assertIn("samples", body["error"])
 
     def test_launch_spawns_runner_and_records_played(self):
         script = self.root / "fake-runner.sh"
@@ -351,12 +340,6 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(item["launches"], 0)
             self.assertEqual(len(item["daily"]), 7)
             self.assertFalse(item["running"])
-        _, demo = fixture.get("/api/games?demo=1")
-        for item in demo["games"]:
-            self.assertIn("minutes", item)
-            self.assertIn("launches", item)
-            self.assertIn("daily", item)
-            self.assertIn("running", item)
 
     def test_state_migration_keeps_old_stamps(self):
         state_dir = self.games / ".leonps5-launcher"
@@ -376,9 +359,6 @@ class ServerTests(unittest.TestCase):
         status, body = fixture.post("/api/stop", {"id": "alpha"})
         self.assertEqual(status, 409)
         self.assertIn("not running", body["error"])
-        status, body = fixture.post("/api/stop", {"id": "demo-aurora-drift"})
-        self.assertEqual(status, 409)
-        self.assertIn("samples", body["error"])
         status, body = fixture.post("/api/stop", {})
         self.assertEqual(status, 400)
 

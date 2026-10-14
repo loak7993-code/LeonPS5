@@ -14,19 +14,10 @@ import webbrowser
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, unquote, urlparse
+from urllib.parse import unquote, urlparse
 
 VERSION = "0.5.0"
 GAME_MARKERS = ("sce_module", "sce_modules", "prx")
-DEMO_TITLES = [
-    "Aurora Drift",
-    "Neon Vanguard",
-    "Hollow Meridian",
-    "Skyline Circuit",
-    "Ember Protocol",
-    "Tidal Runner",
-    "Starfall Frontier",
-]
 MIME = {
     ".html": "text/html; charset=utf-8",
     ".js": "text/javascript; charset=utf-8",
@@ -208,26 +199,6 @@ def suggestions():
         if candidate.is_dir() and candidate not in found:
             found.append(candidate)
     return [str(path) for path in found]
-
-
-def demo_games():
-    return [
-        {
-            "id": f"demo-{title.lower().replace(' ', '-')}",
-            "folder": f"sample-{position + 1}",
-            "title": title,
-            "hasIcon": False,
-            "hasPic": False,
-            "lastPlayed": None,
-            "minutes": 0.0,
-            "launches": 0,
-            "daily": [0.0] * DAILY_SPAN,
-            "running": False,
-            "demo": True,
-            "description": f"Sample title {position + 1} of {len(DEMO_TITLES)}. Sample art only, nothing launches.",
-        }
-        for position, title in enumerate(DEMO_TITLES)
-    ]
 
 
 def normalize_title(text):
@@ -434,7 +405,6 @@ class Library:
                     "hasIcon": has_icon,
                     "hasPic": has_pic,
                     "lastPlayed": self.profile_stats().get(entry.name, empty_stats())["lastPlayed"],
-                    "demo": False,
                     "description": description or (matched["description"] if matched else ""),
                     "artUrl": matched["art"] if matched and not has_icon and not has_pic else None,
                     "genre": matched["genre"] if matched else "",
@@ -497,7 +467,7 @@ class Library:
             )
         return entries
 
-    def payload(self, demo=False):
+    def payload(self):
         with self.lock:
             games = []
             for item in self.games:
@@ -517,9 +487,6 @@ class Library:
             profiles = [dict(item) for item in self.profiles["profiles"]]
             active_profile = self.active_profile()
             showcase = self.showcase_entries()
-        if demo:
-            games = demo_games()
-            showcase = []
         return {
             "games": games,
             "profiles": profiles,
@@ -565,8 +532,6 @@ class Library:
     def launch(self, game_id):
         if game_id.startswith("showcase-"):
             raise LaunchError("That title is not installed. Showcase entries are browse-only.")
-        if game_id.startswith("demo-"):
-            raise LaunchError("Demo titles are samples and do not launch")
         with self.lock:
             game = next((item for item in self.games if item["id"] == game_id), None)
         if game is None:
@@ -621,8 +586,6 @@ class Library:
         self.save_state()
 
     def stop(self, game_id):
-        if game_id.startswith("demo-"):
-            raise LaunchError("Demo titles are samples and do not launch")
         with self.lock:
             session = self.running.get(game_id)
             if session is None:
@@ -692,7 +655,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         parsed = urlparse(self.path)
         if parsed.path == "/api/games":
-            self.send_json(self.library.payload(demo=self.demo_flag(parsed)))
+            self.send_json(self.library.payload())
             return
         if parsed.path == "/api/setup/status":
             self.send_json(setup_status(self.web_dir, self.web_source))
@@ -713,12 +676,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         getattr(self, method)()
 
-    def demo_flag(self, parsed):
-        return parse_qs(parsed.query).get("demo", ["0"])[0] not in ("0", "", "false")
-
     def post_scan(self):
         self.library.scan()
-        self.send_json(self.library.payload(demo=self.demo_flag(urlparse(self.path))))
+        self.send_json(self.library.payload())
 
     def post_launch(self):
         body = self.read_json()

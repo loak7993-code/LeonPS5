@@ -9,7 +9,6 @@ export type Game = {
   launches: number;
   daily: number[];
   running: boolean;
-  demo: boolean;
   description: string;
   artUrl?: string;
   showcase?: boolean;
@@ -65,12 +64,12 @@ async function parse<T>(response: Response): Promise<T> {
   return body as T;
 }
 
-export function loadLibrary(demo: boolean): Promise<Library> {
-  return fetch(`/api/games${demo ? "?demo=1" : ""}`).then((r) => parse<Library>(r));
+export function loadLibrary(): Promise<Library> {
+  return fetch("/api/games").then((r) => parse<Library>(r));
 }
 
-export function rescan(demo: boolean): Promise<Library> {
-  return fetch(`/api/scan${demo ? "?demo=1" : ""}`, { method: "POST" }).then((r) => parse<Library>(r));
+export function rescan(): Promise<Library> {
+  return fetch("/api/scan", { method: "POST" }).then((r) => parse<Library>(r));
 }
 
 export function launchGame(id: string): Promise<{ status: string; command: string }> {

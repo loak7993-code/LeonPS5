@@ -25,7 +25,6 @@ export type LaunchFlow = {
 };
 
 export function useLaunchFlow(
-  demo: boolean,
   onRefreshed: (library: Library) => void,
   onSettled: (game: Game) => void,
   describeNetworkError: (message: string) => string,
@@ -47,7 +46,7 @@ export function useLaunchFlow(
           chime();
           setLaunch({ game, phase: "running", error: null, command: result.command });
           api
-            .loadLibrary(demo)
+            .loadLibrary()
             .then(onRefreshed)
             .catch(() => undefined);
           timer.current = window.setTimeout(() => {
@@ -69,7 +68,7 @@ export function useLaunchFlow(
           });
         });
     },
-    [demo, describeNetworkError, onRefreshed, onSettled],
+    [describeNetworkError, onRefreshed, onSettled],
   );
 
   const retry = useCallback(() => {

@@ -21,7 +21,7 @@ const Card = memo(function Card({ game, selected, onSelect, onActivate, radius, 
   return (
     <motion.button
       type="button"
-      aria-label={game.demo ? `${game.title}, demo title` : game.title}
+      aria-label={game.title}
       data-selected={selected ? "true" : undefined}
       onMouseEnter={() => onSelect(game.id)}
       onFocus={() => onSelect(game.id)}
@@ -193,11 +193,9 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
                 {selected.title}
               </h1>
               <p className="mt-1 truncate font-mono text-xs text-muted">
-                {selected.demo
-                  ? "Demo title · samples only, nothing launches"
-                  : selected.showcase
-                    ? `${selected.genre || "Showcase"} · not installed`
-                    : `${selected.folder} · ${relativeTime(selected.lastPlayed)}`}
+                {selected.showcase
+                  ? `${selected.genre || "Showcase"} · not installed`
+                  : `${selected.folder} · ${relativeTime(selected.lastPlayed)}`}
               </p>
             </motion.div>
           )}
@@ -249,11 +247,7 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
                 </div>
                 <div className="relative p-5">
                   <div className="flex flex-wrap items-center gap-3">
-                    {selected.demo ? (
-                      <div className="inline-flex h-12 items-center rounded-xl bg-white/10 px-5 text-sm text-muted">
-                        Sample titles do not launch
-                      </div>
-                    ) : selected.showcase && !selected.installed ? null : selected.running ? (
+                    {selected.showcase && !selected.installed ? null : selected.running ? (
                       <button
                         type="button"
                         onClick={() => onStop?.(selected)}
@@ -343,11 +337,11 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
                   )}
                   <p className="mt-3 max-w-prose text-sm leading-relaxed text-text/90">
                     {selected.description.trim() ||
-                      (selected.demo
-                        ? "Sample art only, nothing launches."
+                      (selected.showcase
+                        ? "No store description available."
                         : "No description yet. Add a README.txt or description.txt to the game folder and rescan.")}
                   </p>
-                  {!selected.demo && <PlayStats game={selected} />}
+                  {!selected.showcase && <PlayStats game={selected} />}
                 </div>
               </div>
             </motion.div>

@@ -19,6 +19,7 @@ import { EmptyState } from "./EmptyState";
 import { LaunchOverlay, StoppedScreen } from "./LaunchOverlay";
 import { useGameTint } from "./gameTint";
 import { SettingsPage } from "./sheets/Settings";
+import { ProfilesSheet } from "./sheets/Profiles";
 import { GridSheet } from "./sheets/LibraryGrid";
 import { AboutSheet, PowerSheet } from "./sheets/AboutPower";
 import { Onboarding } from "./Onboarding";
@@ -28,7 +29,7 @@ import { startAmbience, stopAmbience, unlock, setVolume } from "./ambience";
 
 const Gallery = lazy(() => import("./Gallery"));
 
-type Overlay = "settings" | "about" | "power" | "grid" | null;
+type Overlay = "settings" | "about" | "power" | "grid" | "profiles" | null;
 
 function LoadingRail() {
   return (
@@ -165,6 +166,31 @@ function Launcher() {
     [flow, toast],
   );
 
+  const profileAction = useCallback(
+    (payload: api.ProfileAction) => {
+      api
+        .profileAction(payload)
+        .then((next) => {
+          apply(next);
+          const name =
+            payload.action === "create"
+              ? next.profiles.find((item) => item.id === next.activeProfile)?.name ?? "the new profile"
+              : next.profiles.find((item) => item.id === next.activeProfile)?.name ?? "";
+          toast(
+            payload.action === "create"
+              ? `Profile created: ${name}`
+              : payload.action === "delete"
+                ? "Profile deleted"
+                : payload.action === "rename"
+                  ? "Profile renamed"
+                  : `Switched to ${name}`,
+          );
+        })
+        .catch((error: unknown) => toast(error instanceof Error ? error.message : String(error)));
+    },
+    [apply, toast],
+  );
+
   const stop = useCallback(
     (game: Game) => {
       api
@@ -223,6 +249,7 @@ function Launcher() {
       else if (index === 2) setOverlay("settings");
       else if (index === 3) setOverlay("about");
       else if (index === 4) setPref("music", !prefs.music);
+      else if (index === 5) setOverlay("profiles");
       else setOverlay("power");
     },
     onCardConfirm: activate,
@@ -400,6 +427,8 @@ function Launcher() {
         onAbout={() => setOverlay("about")}
         musicOn={prefs.music}
         onMusicToggle={() => setPref("music", !prefs.music)}
+        onProfiles={() => setOverlay("profiles")}
+        profileName={library?.profiles.find((item) => item.id === library?.activeProfile)?.name ?? "Player 1"}
         topBarStyle={prefs.topBarStyle}
         showWordmark={prefs.showWordmark}
         onPower={() => setOverlay("power")}
@@ -453,6 +482,14 @@ function Launcher() {
             window.localStorage.setItem("leonps5-onboarded", "done");
             setOnboarding(false);
           }}
+        />
+      )}
+      {overlay === "profiles" && library && (
+        <ProfilesSheet
+          key="profiles"
+          library={library}
+          onClose={() => setOverlay(null)}
+          onAction={profileAction}
         />
       )}
       {overlay === "settings" && library && (

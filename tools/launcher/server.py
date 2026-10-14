@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 GAME_MARKERS = ("sce_module", "sce_modules", "prx")
 DEMO_TITLES = [
     "Aurora Drift",
@@ -46,6 +46,9 @@ class LaunchError(Exception):
 PIC_NAMES = ("PIC1.PNG", "pic1.png", "PIC1.png", "pic1.PNG")
 DAILY_KEEP = 90
 DAILY_SPAN = 7
+MAX_PROFILES = 8
+MAX_NAME_CHARS = 24
+DEFAULT_PROFILE = {"id": "p1", "name": "Player 1"}
 
 
 def empty_stats():
@@ -85,6 +88,50 @@ def daily_series(daily, span=DAILY_SPAN):
 def config_path():
     base = os.environ.get("XDG_CONFIG_HOME") or str(Path.home() / ".config")
     return Path(base) / "leonps5-launcher" / "config.json"
+
+
+def profiles_path():
+    return config_path().parent / "profiles.json"
+
+
+def clean_name(name):
+    return " ".join(str(name).split())[:MAX_NAME_CHARS]
+
+
+def load_profiles():
+    try:
+        data = json.loads(profiles_path().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        data = {}
+    profiles = []
+    if isinstance(data, dict) and isinstance(data.get("profiles"), list):
+        for item in data["profiles"]:
+            if not isinstance(item, dict):
+                continue
+            pid = str(item.get("id", "")).strip()
+            name = clean_name(item.get("name", ""))
+            if pid and name:
+                profiles.append({"id": pid, "name": name})
+    if not profiles:
+        profiles = [dict(DEFAULT_PROFILE)]
+    seen = set()
+    unique = [item for item in profiles if not (item["id"] in seen or seen.add(item["id"]))]
+    active = str(data.get("active", "")) if isinstance(data, dict) else ""
+    if not any(item["id"] == active for item in unique):
+        active = unique[0]["id"]
+    return {"active": active, "profiles": unique}
+
+
+def save_profiles(state):
+    try:
+        profiles_path().parent.mkdir(parents=True, exist_ok=True)
+        profiles_path().write_text(json.dumps(state, indent=1), encoding="utf-8")
+    except OSError:
+        pass
+
+
+def looks_like_stats(value):
+    return isinstance(value, dict) and ("lastPlayed" in value or "minutes" in value or "launches" in value or "daily" in value)
 
 
 def load_config():
@@ -220,9 +267,75 @@ class Library:
         self.games = []
         self.stats = {}
         self.running = {}
+        self.profiles = load_profiles()
         self.suggestions_cache = suggestions()
         self.load_state()
         self.scan()
+
+    def active_profile(self):
+        return self.profiles["active"]
+
+    def profile_stats(self):
+        return self.stats.setdefault(self.active_profile(), {})
+
+    def save_profiles(self):
+        save_profiles(self.profiles)
+
+    def next_profile_id(self):
+        numbers = []
+        for item in self.profiles["profiles"]:
+            if item["id"].startswith("p") and item["id"][1:].isdigit():
+                numbers.append(int(item["id"][1:]))
+        return f"p{max(numbers, default=0) + 1}"
+
+    def create_profile(self, name):
+        name = clean_name(name)
+        if not name:
+            raise LaunchError("Profile names need at least one character")
+        if len(self.profiles["profiles"]) >= MAX_PROFILES:
+            raise LaunchError(f"At most {MAX_PROFILES} profiles fit")
+        if any(item["name"].lower() == name.lower() for item in self.profiles["profiles"]):
+            raise LaunchError("A profile with that name already exists")
+        profile = {"id": self.next_profile_id(), "name": name}
+        self.profiles["profiles"].append(profile)
+        self.profiles["active"] = profile["id"]
+        self.save_profiles()
+        return profile
+
+    def switch_profile(self, profile_id):
+        if not any(item["id"] == profile_id for item in self.profiles["profiles"]):
+            raise LaunchError("Unknown profile")
+        self.profiles["active"] = profile_id
+        self.save_profiles()
+        return profile_id
+
+    def rename_profile(self, profile_id, name):
+        name = clean_name(name)
+        if not name:
+            raise LaunchError("Profile names need at least one character")
+        target = next((item for item in self.profiles["profiles"] if item["id"] == profile_id), None)
+        if target is None:
+            raise LaunchError("Unknown profile")
+        if any(item["id"] != profile_id and item["name"].lower() == name.lower() for item in self.profiles["profiles"]):
+            raise LaunchError("A profile with that name already exists")
+        target["name"] = name
+        self.save_profiles()
+        return target
+
+    def delete_profile(self, profile_id):
+        remaining = [item for item in self.profiles["profiles"] if item["id"] != profile_id]
+        if len(remaining) == len(self.profiles["profiles"]):
+            raise LaunchError("Unknown profile")
+        if not remaining:
+            raise LaunchError("The last profile cannot be deleted")
+        with self.lock:
+            self.stats.pop(profile_id, None)
+        self.save_state()
+        self.profiles["profiles"] = remaining
+        if self.profiles["active"] == profile_id:
+            self.profiles["active"] = remaining[0]["id"]
+        self.save_profiles()
+        return self.profiles["active"]
 
     def set_games_dir(self, games_dir):
         path = Path(games_dir).expanduser()
@@ -247,8 +360,16 @@ class Library:
             data = json.loads(self.state_path().read_text(encoding="utf-8"))
         except (OSError, ValueError):
             data = {}
-        if isinstance(data, dict):
-            self.stats = {str(key): normalize_stats(value) for key, value in data.items()}
+        self.stats = {}
+        if isinstance(data, dict) and data:
+            values = list(data.values())
+            if any(looks_like_stats(value) or isinstance(value, str) for value in values):
+                self.stats = {self.active_profile(): {str(key): normalize_stats(value) for key, value in data.items()}}
+            else:
+                for profile_id, games in data.items():
+                    if not isinstance(games, dict):
+                        continue
+                    self.stats[str(profile_id)] = {str(key): normalize_stats(value) for key, value in games.items()}
 
     def save_state(self):
         try:
@@ -290,7 +411,7 @@ class Library:
                         for base in ("sce_sys", ".")
                         for name in PIC_NAMES
                     ),
-                    "lastPlayed": self.stats.get(entry.name, empty_stats())["lastPlayed"],
+                    "lastPlayed": self.profile_stats().get(entry.name, empty_stats())["lastPlayed"],
                     "demo": False,
                     "description": read_description(entry),
                 }
@@ -302,7 +423,7 @@ class Library:
         with self.lock:
             games = []
             for item in self.games:
-                stats = self.stats.get(item["id"], empty_stats())
+                stats = self.profile_stats().get(item["id"], empty_stats())
                 games.append(
                     dict(
                         item,
@@ -315,10 +436,14 @@ class Library:
                 )
             extra = list(self.extra_args)
             cached_suggestions = self.suggestions_cache
+            profiles = [dict(item) for item in self.profiles["profiles"]]
+            active_profile = self.active_profile()
         if demo:
             games = demo_games()
         return {
             "games": games,
+            "profiles": profiles,
+            "activeProfile": active_profile,
             "gamesDir": str(self.games_dir),
             "runnerFound": self.runner is not None,
             "runnerPath": str(self.runner) if self.runner else None,
@@ -384,23 +509,23 @@ class Library:
                 log.close()
         stamp = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
         with self.lock:
-            stats = self.stats.setdefault(game_id, empty_stats())
+            stats = self.stats.setdefault(self.active_profile(), {}).setdefault(game_id, empty_stats())
             stats["lastPlayed"] = stamp
             stats["launches"] += 1
             self.running[game_id] = {"process": process, "started": time.monotonic()}
         self.save_state()
-        threading.Thread(target=self.watch_session, args=(game_id, process), daemon=True).start()
+        threading.Thread(target=self.watch_session, args=(game_id, process, self.active_profile()), daemon=True).start()
         parts = [Path(self.runner).name, *self.extra_args, game["folder"]]
         return {"status": "started", "command": " ".join(parts)}
 
-    def watch_session(self, game_id, process):
+    def watch_session(self, game_id, process, profile_id):
         process.wait()
         with self.lock:
             session = self.running.pop(game_id, None)
             if session is None:
                 return
             minutes = max(0.0, (time.monotonic() - session["started"]) / 60.0)
-            stats = self.stats.setdefault(game_id, empty_stats())
+            stats = self.stats.setdefault(profile_id, {}).setdefault(game_id, empty_stats())
             stats["minutes"] += minutes
             today = time.strftime("%Y-%m-%d")
             stats["daily"][today] = round(stats["daily"].get(today, 0.0) + minutes, 2)
@@ -440,6 +565,7 @@ POST_ROUTES = {
     "/api/config": "post_config",
     "/api/open-folder": "post_open_folder",
     "/api/stop": "post_stop",
+    "/api/profile": "post_profile",
     "/api/quit": "post_quit",
     "/api/setup/install": "post_setup_install",
 }
@@ -529,6 +655,30 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             self.send_json(self.library.stop(game_id))
+        except LaunchError as error:
+            self.send_json({"error": str(error)}, 409)
+        except Exception as error:
+            self.send_json({"error": f"Launcher error: {error}"}, 500)
+
+    def post_profile(self):
+        body = self.read_json()
+        if not isinstance(body, dict):
+            self.send_json({"error": "Invalid profile payload"}, 400)
+            return
+        action = str(body.get("action", ""))
+        try:
+            if action == "create":
+                self.library.create_profile(body.get("name", ""))
+            elif action == "switch":
+                self.library.switch_profile(str(body.get("id", "")))
+            elif action == "rename":
+                self.library.rename_profile(str(body.get("id", "")), body.get("name", ""))
+            elif action == "delete":
+                self.library.delete_profile(str(body.get("id", "")))
+            else:
+                self.send_json({"error": "Unknown profile action"}, 400)
+                return
+            self.send_json(self.library.payload())
         except LaunchError as error:
             self.send_json({"error": str(error)}, 409)
         except Exception as error:

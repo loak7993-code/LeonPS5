@@ -1,4 +1,4 @@
-import { MagnifyingGlass, SquaresFour, GearSix, Power, SpeakerHigh, SpeakerX } from "@phosphor-icons/react";
+import { MagnifyingGlass, SquaresFour, GearSix, Power, SpeakerHigh, SpeakerX, User } from "@phosphor-icons/react";
 import { forwardRef } from "react";
 
 type TopBarProps = {
@@ -15,6 +15,8 @@ type TopBarProps = {
   onPower: () => void;
   musicOn: boolean;
   onMusicToggle: () => void;
+  onProfiles: () => void;
+  profileName: string;
   topBarStyle: "glass" | "solid" | "transparent";
   showWordmark: boolean;
 };
@@ -51,6 +53,8 @@ export const TopBar = forwardRef<HTMLInputElement, TopBarProps>(function TopBar(
     onPower,
     musicOn,
     onMusicToggle,
+    onProfiles,
+    profileName,
     topBarStyle,
     showWordmark,
   },
@@ -100,7 +104,26 @@ export const TopBar = forwardRef<HTMLInputElement, TopBarProps>(function TopBar(
           ))
         )}
       </div>
-      {showWordmark && <div className="font-mono text-xs text-muted/70 max-lg:hidden">LeonPS5</div>}
+      <div className="flex items-center gap-3">
+        {showWordmark && <div className="font-mono text-xs text-muted/70 max-lg:hidden">LeonPS5</div>}
+        <button
+          type="button"
+          data-focus-row="0"
+          aria-label={`Profile: ${profileName}`}
+          title={`Profile: ${profileName}`}
+          className={`flex h-10 items-center gap-2 rounded-full pl-1.5 pr-4 text-sm transition-colors max-md:pr-2.5 ${
+            index === 6 ? "bg-white/10 text-text" : "text-muted hover:text-text"
+          }`}
+          onMouseEnter={() => onIndex(6)}
+          onFocus={() => onIndex(6)}
+          onClick={onProfiles}
+        >
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/10 text-accent">
+            <User size={16} weight="bold" />
+          </span>
+          <span className="max-lg:hidden">{profileName}</span>
+        </button>
+      </div>
     </header>
   );
 });

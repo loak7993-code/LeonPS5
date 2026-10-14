@@ -90,6 +90,7 @@ class ServerTests(unittest.TestCase):
         self.root = Path(tempfile.mkdtemp(prefix="leonps5-launcher-test-"))
         self.addCleanup(shutil.rmtree, self.root, ignore_errors=True)
         server.config_path = lambda: self.root / "config.json"
+        server.profiles_path = lambda: self.root / "profiles.json"
         self.games = self.root / "games"
         self.games.mkdir()
         make_game(self.games, "alpha", "Alpha Strike", icon=True, readme="Alpha readme line one.\n\nAlpha readme line two.\n")
@@ -173,6 +174,89 @@ class ServerTests(unittest.TestCase):
         self.assertIsNotNone(alpha["lastPlayed"])
         log = self.games / ".leonps5-launcher" / "run.log"
         self.assertTrue(log.is_file())
+
+    def test_fresh_payload_has_default_profile(self):
+        fixture = self.spawn()
+        status, payload = fixture.get("/api/games")
+        self.assertEqual(status, 200)
+        self.assertEqual(payload["activeProfile"], "p1")
+        self.assertEqual(payload["profiles"], [{"id": "p1", "name": "Player 1"}])
+
+    def test_profile_crud_and_per_profile_stats(self):
+        script = self.root / "sleepy-runner.sh"
+        script.write_text("#!/bin/sh\nsleep 1.2\n", encoding="utf-8")
+        script.chmod(0o755)
+        fixture = self.spawn(runner=script)
+        status, body = fixture.post("/api/profile", {"action": "create", "name": "  Rival  "})
+        self.assertEqual(status, 200)
+        self.assertEqual(body["activeProfile"], "p2")
+        self.assertIn({"id": "p2", "name": "Rival"}, body["profiles"])
+        status, _ = fixture.post("/api/launch", {"id": "alpha"})
+        self.assertEqual(status, 200)
+        deadline = time.time() + 10.0
+        while time.time() < deadline:
+            _, payload = fixture.get("/api/games")
+            alpha = next(item for item in payload["games"] if item["id"] == "alpha")
+            if not alpha["running"] and alpha["minutes"] > 0:
+                break
+            time.sleep(0.2)
+        self.assertGreater(alpha["minutes"], 0)
+        self.assertEqual(alpha["launches"], 1)
+        status, body = fixture.post("/api/profile", {"action": "switch", "id": "p1"})
+        self.assertEqual(status, 200)
+        self.assertEqual(body["activeProfile"], "p1")
+        alpha = next(item for item in body["games"] if item["id"] == "alpha")
+        self.assertIsNone(alpha["lastPlayed"])
+        self.assertEqual(alpha["minutes"], 0.0)
+        self.assertEqual(alpha["launches"], 0)
+        status, body = fixture.post("/api/profile", {"action": "switch", "id": "p2"})
+        alpha = next(item for item in body["games"] if item["id"] == "alpha")
+        self.assertIsNotNone(alpha["lastPlayed"])
+        status, body = fixture.post("/api/profile", {"action": "rename", "id": "p2", "name": "Rival Two"})
+        self.assertEqual(status, 200)
+        self.assertIn({"id": "p2", "name": "Rival Two"}, body["profiles"])
+        status, body = fixture.post("/api/profile", {"action": "delete", "id": "p2"})
+        self.assertEqual(status, 200)
+        self.assertEqual(body["activeProfile"], "p1")
+        self.assertEqual(len(body["profiles"]), 1)
+
+    def test_profile_validation_errors(self):
+        fixture = self.spawn()
+        status, body = fixture.post("/api/profile", {"action": "create", "name": "   "})
+        self.assertEqual(status, 409)
+        status, body = fixture.post("/api/profile", {"action": "create", "name": "Player 1"})
+        self.assertEqual(status, 409)
+        status, body = fixture.post("/api/profile", {"action": "switch", "id": "missing"})
+        self.assertEqual(status, 409)
+        status, body = fixture.post("/api/profile", {"action": "delete", "id": "p1"})
+        self.assertEqual(status, 409)
+        self.assertIn("last profile", body["error"])
+        status, body = fixture.post("/api/profile", {"action": "nope"})
+        self.assertEqual(status, 400)
+        for index in range(2, server.MAX_PROFILES + 1):
+            status, _ = fixture.post("/api/profile", {"action": "create", "name": f"Player {index}"})
+            self.assertEqual(status, 200)
+        status, body = fixture.post("/api/profile", {"action": "create", "name": "One too many"})
+        self.assertEqual(status, 409)
+        self.assertIn("At most", body["error"])
+
+    def test_flat_state_migrates_into_first_profile(self):
+        state_dir = self.games / ".leonps5-launcher"
+        state_dir.mkdir(parents=True, exist_ok=True)
+        (state_dir / "state.json").write_text(
+            json.dumps({"alpha": {"lastPlayed": "2026-01-02T03:04:05Z", "minutes": 5.5, "launches": 2, "daily": {}}}),
+            encoding="utf-8",
+        )
+        fixture = self.spawn()
+        _, payload = fixture.get("/api/games")
+        alpha = next(item for item in payload["games"] if item["id"] == "alpha")
+        self.assertEqual(alpha["lastPlayed"], "2026-01-02T03:04:05Z")
+        self.assertEqual(alpha["minutes"], 5.5)
+        self.assertEqual(alpha["launches"], 2)
+        status, body = fixture.post("/api/profile", {"action": "create", "name": "Fresh"})
+        fresh = next(item for item in body["games"] if item["id"] == "alpha")
+        self.assertIsNone(fresh["lastPlayed"])
+        self.assertEqual(fresh["minutes"], 0.0)
 
     def test_pic_serves_png_and_404s(self):
         folder = make_game(self.games, "alpha", "Alpha Strike", icon=True)

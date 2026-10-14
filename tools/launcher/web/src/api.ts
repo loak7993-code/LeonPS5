@@ -13,8 +13,12 @@ export type Game = {
   description: string;
 };
 
+export type Profile = { id: string; name: string };
+
 export type Library = {
   games: Game[];
+  profiles: Profile[];
+  activeProfile: string;
   gamesDir: string;
   runnerFound: boolean;
   runnerPath: string | null;
@@ -87,6 +91,20 @@ export function iconUrl(id: string): string {
 
 export function picUrl(id: string): string {
   return `/api/pic/${encodeURIComponent(id)}`;
+}
+
+export type ProfileAction =
+  | { action: "create"; name: string }
+  | { action: "switch"; id: string }
+  | { action: "rename"; id: string; name: string }
+  | { action: "delete"; id: string };
+
+export function profileAction(payload: ProfileAction): Promise<Library> {
+  return fetch("/api/profile", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).then((r) => parse<Library>(r));
 }
 
 export function stopGame(id: string): Promise<{ status: string }> {

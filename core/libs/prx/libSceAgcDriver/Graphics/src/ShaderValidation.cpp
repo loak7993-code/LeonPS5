@@ -383,7 +383,7 @@ Module Inspect(const CompiledShader& compiled, const State& state, const VkPhysi
     Require(entries == 1 && memoryModels == 1, "SPIR-V must contain one entry point and memory model");
     Require(entryPoint != 0 && std::all_of(executionModeTargets.begin(), executionModeTargets.end(), [&](auto target) { return target == entryPoint; }), "execution mode refers to a different entry point");
     Require(!fragment || upperLeft, "fragment coordinates must use an upper-left origin");
-    const auto mode = [&](std::uint32_t name, std::vector<std::uint32_t> operands) {
+    const auto mode = [&](std::uint32_t name, const std::vector<std::uint32_t>& operands) {
         const auto it = module.modes.find(name);
         Require(it != module.modes.end() && it->second == operands, "missing or incompatible shader execution mode");
     };

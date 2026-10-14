@@ -35,8 +35,8 @@ struct Sampler {
     std::map<std::uint64_t, std::pair<std::uint64_t, std::uint64_t>> counts;
     std::uint64_t samples = 0;
 
-    ~Sampler() noexcept(false) {
-        if (target != nullptr && !CloseHandle(target)) throw std::system_error(GetLastError(), std::system_category(), "Closing sampler thread handle");
+    ~Sampler() {
+        if (target != nullptr && !CloseHandle(target)) std::fputs("APS5 sample worker: closing the sampler thread handle failed\n", stderr);
     }
 
     void sample() {

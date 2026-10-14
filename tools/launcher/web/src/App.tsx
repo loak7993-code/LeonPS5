@@ -92,16 +92,47 @@ function Launcher() {
   const searchRef = useRef<HTMLInputElement>(null);
   const anchorRef = useRef<string | null>(null);
 
-  const { library, loadError, reload, apply } = useLauncherData(demo);
-  const { filtered, query, setQuery, sort, toggleSort } = useLibraryFilter(library);
+  const { library, loadError, reload, apply } = useLauncherData(false);
 
   const games = useMemo(() => library?.games ?? [], [library]);
-  const gamesEmpty = library !== null && games.length === 0 && !demo;
+  const showcaseEntries = useMemo(
+    () => (library ? (demo ? library.showcase.production : library.showcase.beta) : []),
+    [library, demo],
+  );
+  const showcaseGames = useMemo(
+    () =>
+      showcaseEntries.map((entry) => ({
+        id: entry.id,
+        folder: "",
+        title: entry.title,
+        hasIcon: false,
+        hasPic: false,
+        lastPlayed: null,
+        minutes: 0,
+        launches: 0,
+        daily: [0, 0, 0, 0, 0, 0, 0],
+        running: false,
+        demo: false,
+        description: entry.description,
+        artUrl: entry.art,
+        showcase: true,
+        installed: entry.installed,
+        genre: entry.genre,
+        storeUrl: entry.storeUrl,
+      })),
+    [showcaseEntries],
+  );
+  const browseLibrary = useMemo(
+    () => (library === null ? null : { ...library, games: [...library.games, ...showcaseGames] }),
+    [library, showcaseGames],
+  );
+  const { filtered, query, setQuery, sort, toggleSort } = useLibraryFilter(browseLibrary);
+  const gamesEmpty = library !== null && games.length === 0 && showcaseGames.length === 0;
 
   const setDemoWithToast = useCallback(
     (next: boolean) => {
       setDemo(next);
-      toast(next ? "Demo titles on" : "Demo titles off");
+      toast(next ? "Showcase: production titles" : "Showcase: testing titles");
     },
     [toast],
   );
@@ -117,7 +148,7 @@ function Launcher() {
 
   const rescan = useCallback(() => {
     api
-      .rescan(demo)
+      .rescan(false)
       .then((next) => {
         apply(next);
         toast(`Library scanned: ${next.games.length} title${next.games.length === 1 ? "" : "s"}`);
@@ -138,7 +169,7 @@ function Launcher() {
     [],
   );
 
-  const flow = useLaunchFlow(demo, apply, useCallback(() => undefined, []), describeNetworkError);
+  const flow = useLaunchFlow(false, apply, useCallback(() => undefined, []), describeNetworkError);
 
   const pageOpenedAt = useRef(0);
   const closeInfo = useCallback(() => {
@@ -150,7 +181,7 @@ function Launcher() {
   const activate = useCallback((game: Game) => {
     pageOpenedAt.current = Date.now();
     setInfoMode(true);
-    applyTint(game.hasIcon ? iconUrl(game.id) : null);
+    applyTint(game.artUrl ?? (game.hasIcon ? iconUrl(game.id) : null));
   }, [applyTint]);
 
   const play = useCallback(
@@ -159,11 +190,19 @@ function Launcher() {
         toast("Demo titles are samples and do not launch");
         return;
       }
+      if (game.showcase && !game.installed) {
+        toast("Not installed. Showcase titles are browse-only.");
+        return;
+      }
+      const target =
+        game.showcase && game.installed
+          ? games.find((item) => item.title.toLowerCase() === game.title.toLowerCase()) ?? game
+          : game;
       setInfoMode(false);
       applyTint(null);
-      flow.start(game);
+      flow.start(target);
     },
-    [flow, toast],
+    [flow, games, toast],
   );
 
   const profileAction = useCallback(
@@ -195,7 +234,7 @@ function Launcher() {
     (game: Game) => {
       api
         .stopGame(game.id)
-        .then(() => api.loadLibrary(demo))
+        .then(() => api.loadLibrary(false))
         .then((next) => {
           apply(next);
           toast(`Stopped ${game.title}`);
@@ -233,12 +272,12 @@ function Launcher() {
     if (!anyRunning) return;
     const id = window.setInterval(() => {
       api
-        .loadLibrary(demo)
+        .loadLibrary(false)
         .then(apply)
         .catch(() => undefined);
     }, 5000);
     return () => window.clearInterval(id);
-  }, [anyRunning, demo, apply]);
+  }, [anyRunning, apply]);
 
   const nav = useLauncherNav({
     filtered,
@@ -406,6 +445,7 @@ function Launcher() {
       />
       <Background
         game={!blocked && prefs.backdrop ? selected : null}
+        customUrl={prefs.customBackdrop}
         blur={infoMode ? Math.min(prefs.backdropBlur, 24) : prefs.backdropBlur}
         opacity={infoMode ? Math.max(prefs.backdropOpacity, 70) : prefs.backdropOpacity}
         waveOpacity={waveOp}

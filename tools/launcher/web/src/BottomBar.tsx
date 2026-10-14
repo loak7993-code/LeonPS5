@@ -14,7 +14,7 @@ type BottomBarProps = {
 
 const LABELS = (sort: SortMode, demo: boolean): string[] => [
   sort === "recent" ? "Recent" : "A to Z",
-  demo ? "Demo on" : "Demo off",
+  demo ? "Beta on" : "Beta off",
   "Open folder",
   "About",
 ];

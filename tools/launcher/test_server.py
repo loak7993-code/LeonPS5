@@ -258,6 +258,33 @@ class ServerTests(unittest.TestCase):
         self.assertIsNone(fresh["lastPlayed"])
         self.assertEqual(fresh["minutes"], 0.0)
 
+    def test_payload_carries_showcase_catalog(self):
+        fixture = self.spawn()
+        _, payload = fixture.get("/api/games")
+        production = payload["showcase"]["production"]
+        beta = payload["showcase"]["beta"]
+        self.assertGreater(len(production), 5)
+        self.assertGreaterEqual(len(beta), 3)
+        self.assertTrue(all(not entry["beta"] for entry in production))
+        self.assertTrue(all(entry["beta"] for entry in beta))
+        demons = next(entry for entry in production if entry["title"] == "Demon's Souls")
+        self.assertTrue(demons["art"].startswith("https://image.api.playstation.com/"))
+        self.assertTrue(demons["description"])
+        self.assertFalse(demons["installed"])
+        self.assertTrue(demons["storeUrl"].startswith("https://store.playstation.com/"))
+
+    def test_showcase_marks_installed_titles(self):
+        make_game(self.games, "demons", "Demon's Souls")
+        _, payload = self.spawn().get("/api/games")
+        demons = next(entry for entry in payload["showcase"]["production"] if entry["title"] == "Demon's Souls")
+        self.assertTrue(demons["installed"])
+
+    def test_launch_refuses_showcase_ids(self):
+        fixture = self.spawn()
+        status, body = fixture.post("/api/launch", {"id": "showcase-10000368"})
+        self.assertEqual(status, 409)
+        self.assertIn("not installed", body["error"])
+
     def test_pic_serves_png_and_404s(self):
         folder = make_game(self.games, "alpha", "Alpha Strike", icon=True)
         (folder / "sce_sys" / "pic1.png").write_bytes(tiny_png((60, 50, 40)))

@@ -36,11 +36,11 @@ export function EmptyState({ gamesDir, onRescan, onOpenFolder, onDemo }: EmptySt
               Open folder
             </Button>
             <Button variant="ghost" icon={<Flask size={16} weight="bold" />} onClick={onDemo}>
-              View demo titles
+              Browse the showcase
             </Button>
           </>
         }
-        note="Demo titles are launcher samples, not your games. A game folder contains sce_module, sce_modules or prx."
+        note="The showcase lists real PlayStation 5 titles you can browse without installing. A game folder contains sce_module, sce_modules or prx."
       />
     </motion.div>
   );

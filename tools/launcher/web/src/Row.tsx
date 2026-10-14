@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { FolderOpen, Play, Stop } from "@phosphor-icons/react";
+import { FolderOpen, Play, Stop, Storefront, Tag } from "@phosphor-icons/react";
 import { GameArt } from "./Art";
 import { iconUrl, picUrl, type Game } from "./api";
 import { relativeTime } from "./data";
@@ -33,7 +33,9 @@ const Card = memo(function Card({ game, selected, onSelect, onActivate, radius, 
       animate={{ scale: selected ? 1.08 : 1, y: selected ? -6 : 0 }}
       transition={{ type: "spring", stiffness: 260, damping: 22 }}
     >
-      {game.hasIcon ? (
+      {game.artUrl ? (
+        <img src={game.artUrl} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover" />
+      ) : game.hasIcon ? (
         <img src={iconUrl(game.id)} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <GameArt id={game.id} title={game.title} className="absolute inset-0 h-full w-full" />
@@ -193,7 +195,9 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
               <p className="mt-1 truncate font-mono text-xs text-muted">
                 {selected.demo
                   ? "Demo title · samples only, nothing launches"
-                  : `${selected.folder} · ${relativeTime(selected.lastPlayed)}`}
+                  : selected.showcase
+                    ? `${selected.genre || "Showcase"} · not installed`
+                    : `${selected.folder} · ${relativeTime(selected.lastPlayed)}`}
               </p>
             </motion.div>
           )}
@@ -210,7 +214,14 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
             >
               <div className="relative w-[min(560px,calc(100vw-9rem))] max-md:w-[calc(100vw-7.5rem)] overflow-hidden rounded-[18px] border border-white/10 bg-panel/60 backdrop-blur-md">
                 <div aria-hidden className="absolute inset-0">
-                  {selected.hasPic ? (
+                  {selected.artUrl ? (
+                    <img
+                      src={selected.artUrl}
+                      alt=""
+                      draggable={false}
+                      className="h-full w-full object-cover opacity-55"
+                    />
+                  ) : selected.hasPic ? (
                     <img
                       src={picUrl(selected.id)}
                       alt=""
@@ -242,7 +253,7 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
                       <div className="inline-flex h-12 items-center rounded-xl bg-white/10 px-5 text-sm text-muted">
                         Sample titles do not launch
                       </div>
-                    ) : selected.running ? (
+                    ) : selected.showcase && !selected.installed ? null : selected.running ? (
                       <button
                         type="button"
                         onClick={() => onStop?.(selected)}
@@ -283,15 +294,53 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
                         </AnimatePresence>
                       </button>
                     )}
-                    <button
-                      type="button"
-                      onClick={() => onOpenFolder?.()}
-                      className="inline-flex h-12 items-center gap-2 rounded-xl border border-line bg-black/20 px-5 text-sm text-text transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
-                    >
-                      <FolderOpen size={16} weight="bold" />
-                      Open folder
-                    </button>
+                    {!selected.showcase && (
+                      <button
+                        type="button"
+                        onClick={() => onOpenFolder?.()}
+                        className="inline-flex h-12 items-center gap-2 rounded-xl border border-line bg-black/20 px-5 text-sm text-text transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                      >
+                        <FolderOpen size={16} weight="bold" />
+                        Open folder
+                      </button>
+                    )}
+                    {selected.showcase && selected.installed && (
+                      <button
+                        type="button"
+                        onClick={() => onPlay?.(selected)}
+                        className="inline-flex h-12 items-center gap-2 rounded-xl border border-line bg-black/20 px-5 text-sm text-text transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                      >
+                        <Play size={16} weight="bold" />
+                        Play installed copy
+                      </button>
+                    )}
                   </div>
+                  {selected.showcase && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {selected.genre && (
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] text-text/90">
+                          <Tag size={11} weight="bold" />
+                          {selected.genre}
+                        </span>
+                      )}
+                      {selected.showcase && !selected.installed && (
+                        <span className="rounded-full bg-white/10 px-3 py-1 text-[11px] text-muted">
+                          Not installed · browse only
+                        </span>
+                      )}
+                      {selected.storeUrl && (
+                        <a
+                          href={selected.storeUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-[11px] text-text/90 transition-colors hover:bg-white/20 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+                        >
+                          <Storefront size={11} weight="bold" />
+                          PlayStation Store
+                        </a>
+                      )}
+                    </div>
+                  )}
                   <p className="mt-3 max-w-prose text-sm leading-relaxed text-text/90">
                     {selected.description.trim() ||
                       (selected.demo

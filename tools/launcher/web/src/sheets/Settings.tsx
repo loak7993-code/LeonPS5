@@ -243,6 +243,17 @@ export function SettingsPage({
                 />
               </SettingsRow>
               <SettingsRow
+                label="Custom background"
+                hint="A picture URL that overrides the game art backdrop when set"
+              >
+                <TextField
+                  label="Custom background URL"
+                  placeholder="https://example.com/wallpaper.jpg"
+                  value={prefs.customBackdrop}
+                  onChange={(event) => onPref("customBackdrop", event.target.value.trim())}
+                />
+              </SettingsRow>
+              <SettingsRow
                 label="Accent glow haze"
                 hint="Faint luminous glow in the screen corners, tinted by the accent"
               >

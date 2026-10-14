@@ -11,6 +11,7 @@ export type Prefs = {
   backdrop: boolean;
   backdropBlur: number;
   backdropOpacity: number;
+  customBackdrop: string;
   music: boolean;
   musicVolume: number;
   sounds: boolean;
@@ -54,6 +55,7 @@ const DEFAULTS: Prefs = {
   backdrop: true,
   backdropBlur: 64,
   backdropOpacity: 55,
+  customBackdrop: "",
   music: true,
   musicVolume: 40,
   sounds: true,
@@ -81,6 +83,8 @@ function read(): Prefs {
         cardSize !== undefined && cardSize in CARD_WIDTH ? (cardSize as CardSize) : DEFAULTS.cardSize,
       motion: parsed.motion === "reduced" ? "reduced" : "full",
       backdrop: parsed.backdrop !== false,
+      customBackdrop:
+        typeof parsed.customBackdrop === "string" ? parsed.customBackdrop.slice(0, 2000) : "",
       backdropBlur:
         typeof parsed.backdropBlur === "number"
           ? Math.max(0, Math.min(96, parsed.backdropBlur))

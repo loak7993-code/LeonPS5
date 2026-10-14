@@ -11,12 +11,29 @@ export type Game = {
   running: boolean;
   demo: boolean;
   description: string;
+  artUrl?: string;
+  showcase?: boolean;
+  installed?: boolean;
+  genre?: string;
+  storeUrl?: string;
+};
+
+export type ShowcaseGame = {
+  id: string;
+  title: string;
+  description: string;
+  art: string;
+  genre: string;
+  beta: boolean;
+  storeUrl: string;
+  installed: boolean;
 };
 
 export type Profile = { id: string; name: string };
 
 export type Library = {
   games: Game[];
+  showcase: { production: ShowcaseGame[]; beta: ShowcaseGame[] };
   profiles: Profile[];
   activeProfile: string;
   gamesDir: string;

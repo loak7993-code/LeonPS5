@@ -62,12 +62,35 @@ function GlowHaze() {
   );
 }
 
-type BackdropProps = { game: Game | null; blur?: number; opacity?: number; waveOpacity?: number };
+type BackdropProps = {
+  game: Game | null;
+  blur?: number;
+  opacity?: number;
+  waveOpacity?: number;
+  customUrl?: string;
+};
 
-function ArtBackdrop({ game, blur = 64, opacity = 55 }: BackdropProps) {
+function ArtBackdrop({ game, blur = 64, opacity = 55, customUrl = "" }: BackdropProps) {
   return (
     <AnimatePresence mode="popLayout">
-      {game && (
+      {customUrl ? (
+        <motion.div
+          key="custom-backdrop"
+          className="absolute -inset-32"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: Math.max(opacity / 100, 0.5) }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.6, ease: [0.2, 0, 0, 1] }}
+        >
+          <img
+            src={customUrl}
+            alt=""
+            draggable={false}
+            className="h-full w-full object-cover"
+            style={{ filter: `blur(${Math.round(blur * 0.35)}px) brightness(0.55) saturate(1.1)` }}
+          />
+        </motion.div>
+      ) : game && (
         <motion.div
           key={game.id}
           className="absolute -inset-32"
@@ -76,7 +99,15 @@ function ArtBackdrop({ game, blur = 64, opacity = 55 }: BackdropProps) {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6, ease: [0.2, 0, 0, 1] }}
         >
-          {game.hasPic ? (
+          {game.artUrl ? (
+            <img
+              src={game.artUrl}
+              alt=""
+              draggable={false}
+              className="h-full w-full object-cover"
+              style={{ filter: `blur(${Math.round(blur * 0.6)}px) brightness(0.55) saturate(1.2)` }}
+            />
+          ) : game.hasPic ? (
             <img
               src={picUrl(game.id)}
               alt=""

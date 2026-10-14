@@ -127,7 +127,7 @@ export function Onboarding({ library, onSaveDir, onDemo, onClose }: OnboardingPr
                 </Button>
                 <div className="flex items-center gap-3">
                   <Button variant="ghost" icon={<Flask size={16} weight="bold" />} onClick={onDemo}>
-                    Show me the demo
+                    Browse the showcase
                   </Button>
                   <Button
                     data-autofocus

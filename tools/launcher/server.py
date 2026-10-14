@@ -15,7 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 GAME_MARKERS = ("sce_module", "sce_modules", "prx")
 DEMO_TITLES = [
     "Aurora Drift",
@@ -228,6 +228,18 @@ def demo_games():
     ]
 
 
+def normalize_title(text):
+    return "".join(char.lower() for char in str(text) if char.isalnum())
+
+
+def load_showcase():
+    try:
+        data = json.loads((Path(__file__).resolve().parent / "showcase.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    return [entry for entry in data if isinstance(entry, dict) and entry.get("id") and entry.get("title")]
+
+
 def read_description(folder):
     for name in ("README.txt", "description.txt"):
         candidate = folder / name
@@ -256,6 +268,9 @@ def open_folder(directory):
     except OSError as error:
         return {"ok": False, "error": f"Could not open the folder: {error}"}
     return {"ok": True}
+
+
+SHOWCASE = load_showcase()
 
 
 class Library:
@@ -419,6 +434,24 @@ class Library:
         with self.lock:
             self.games = games
 
+    def showcase_entries(self):
+        installed_titles = {normalize_title(game["title"]) for game in self.games}
+        entries = []
+        for item in SHOWCASE:
+            entries.append(
+                {
+                    "id": item["id"],
+                    "title": item["title"],
+                    "description": item["description"],
+                    "art": item["art"],
+                    "genre": item.get("genre", ""),
+                    "beta": bool(item.get("beta")),
+                    "storeUrl": item.get("storeUrl", ""),
+                    "installed": normalize_title(item["title"]) in installed_titles,
+                }
+            )
+        return entries
+
     def payload(self, demo=False):
         with self.lock:
             games = []
@@ -438,12 +471,18 @@ class Library:
             cached_suggestions = self.suggestions_cache
             profiles = [dict(item) for item in self.profiles["profiles"]]
             active_profile = self.active_profile()
+            showcase = self.showcase_entries()
         if demo:
             games = demo_games()
+            showcase = []
         return {
             "games": games,
             "profiles": profiles,
             "activeProfile": active_profile,
+            "showcase": {
+                "production": [entry for entry in showcase if not entry["beta"]],
+                "beta": [entry for entry in showcase if entry["beta"]],
+            },
             "gamesDir": str(self.games_dir),
             "runnerFound": self.runner is not None,
             "runnerPath": str(self.runner) if self.runner else None,
@@ -479,6 +518,8 @@ class Library:
         return {**self.payload(), "saved": config}
 
     def launch(self, game_id):
+        if game_id.startswith("showcase-"):
+            raise LaunchError("That title is not installed. Showcase entries are browse-only.")
         if game_id.startswith("demo-"):
             raise LaunchError("Demo titles are samples and do not launch")
         with self.lock:

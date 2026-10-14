@@ -7,6 +7,7 @@ export function sampleIconColor(url: string): Promise<string | null> {
       return;
     }
     const image = new Image();
+    image.crossOrigin = "anonymous";
     let settled = false;
     const finish = (value: string | null): void => {
       if (settled) return;
@@ -23,8 +24,19 @@ export function sampleIconColor(url: string): Promise<string | null> {
         finish(null);
         return;
       }
-      context.drawImage(image, 0, 0, size, size);
-      const pixels = context.getImageData(0, 0, size, size).data;
+      try {
+        context.drawImage(image, 0, 0, size, size);
+      } catch {
+        finish(null);
+        return;
+      }
+      let pixels: Uint8ClampedArray;
+      try {
+        pixels = context.getImageData(0, 0, size, size).data;
+      } catch {
+        finish(null);
+        return;
+      }
       let red = 0;
       let green = 0;
       let blue = 0;

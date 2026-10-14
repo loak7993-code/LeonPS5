@@ -267,17 +267,19 @@ function Launcher() {
     };
   }, [toast]);
 
-  const anyRunning = library?.games.some((game) => game.running) ?? false;
+  const knownGames = useRef<Set<string>>(new Set());
   useEffect(() => {
-    if (!anyRunning) return;
-    const id = window.setInterval(() => {
-      api
-        .loadLibrary(false)
-        .then(apply)
-        .catch(() => undefined);
-    }, 5000);
-    return () => window.clearInterval(id);
-  }, [anyRunning, apply]);
+    if (!library) return;
+    const fresh = library.games.filter((game) => knownGames.current.size > 0 && !knownGames.current.has(game.id));
+    if (fresh.length > 0) {
+      toast(
+        fresh.length === 1
+          ? `Detected ${fresh[0].title}`
+          : `Detected ${fresh.length} new titles`,
+      );
+    }
+    for (const game of library.games) knownGames.current.add(game.id);
+  }, [library, toast]);
 
   const nav = useLauncherNav({
     filtered,
@@ -330,6 +332,16 @@ function Launcher() {
       stopAmbience();
     }
   }, [gestured, prefs.music, prefs.musicVolume, overlay, flow.launch, searching, stopped]);
+
+  const selectedIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    selectedIdRef.current = filtered[nav.cardIndex]?.id ?? null;
+  }, [filtered, nav.cardIndex]);
+  useEffect(() => {
+    if (!selectedIdRef.current) return;
+    const at = filtered.findIndex((game) => game.id === selectedIdRef.current);
+    if (at >= 0 && at !== nav.cardIndex) nav.setCardIndex(at);
+  }, [filtered, nav]);
 
   useEffect(() => {
     if (!anchorRef.current) return;

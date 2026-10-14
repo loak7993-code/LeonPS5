@@ -8,6 +8,7 @@ import subprocess
 import sys
 import threading
 import time
+import unicodedata
 import urllib.request
 import webbrowser
 import zipfile
@@ -15,7 +16,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlparse
 
-VERSION = "0.4.0"
+VERSION = "0.5.0"
 GAME_MARKERS = ("sce_module", "sce_modules", "prx")
 DEMO_TITLES = [
     "Aurora Drift",
@@ -46,6 +47,7 @@ class LaunchError(Exception):
 PIC_NAMES = ("PIC1.PNG", "pic1.png", "PIC1.png", "pic1.PNG")
 DAILY_KEEP = 90
 DAILY_SPAN = 7
+AUTO_SCAN_INTERVAL = 4.0
 MAX_PROFILES = 8
 MAX_NAME_CHARS = 24
 DEFAULT_PROFILE = {"id": "p1", "name": "Player 1"}
@@ -229,7 +231,9 @@ def demo_games():
 
 
 def normalize_title(text):
-    return "".join(char.lower() for char in str(text) if char.isalnum())
+    flattened = unicodedata.normalize("NFKD", str(text))
+    flattened = "".join(char for char in flattened if not unicodedata.combining(char))
+    return "".join(char.lower() for char in flattened if char.isalnum())
 
 
 def load_showcase():
@@ -286,6 +290,7 @@ class Library:
         self.suggestions_cache = suggestions()
         self.load_state()
         self.scan()
+        threading.Thread(target=self.watch_library, daemon=True).start()
 
     def active_profile(self):
         return self.profiles["active"]
@@ -406,6 +411,7 @@ class Library:
 
     def scan(self):
         games = []
+        matched_titles = {normalize_title(item["title"]): item for item in SHOWCASE}
         try:
             entries = sorted(self.games_dir.iterdir())
         except OSError:
@@ -415,24 +421,63 @@ class Library:
                 continue
             if not any((entry / marker).is_dir() for marker in GAME_MARKERS):
                 continue
+            has_icon = (entry / "sce_sys" / "icon0.png").is_file()
+            has_pic = any((entry / base / name).is_file() for base in ("sce_sys", ".") for name in PIC_NAMES)
+            title = self.title_for(entry)
+            description = read_description(entry)
+            matched = matched_titles.get(normalize_title(title))
             games.append(
                 {
                     "id": entry.name,
                     "folder": entry.name,
-                    "title": self.title_for(entry),
-                    "hasIcon": (entry / "sce_sys" / "icon0.png").is_file(),
-                    "hasPic": any(
-                        (entry / base / name).is_file()
-                        for base in ("sce_sys", ".")
-                        for name in PIC_NAMES
-                    ),
+                    "title": title,
+                    "hasIcon": has_icon,
+                    "hasPic": has_pic,
                     "lastPlayed": self.profile_stats().get(entry.name, empty_stats())["lastPlayed"],
                     "demo": False,
-                    "description": read_description(entry),
+                    "description": description or (matched["description"] if matched else ""),
+                    "artUrl": matched["art"] if matched and not has_icon and not has_pic else None,
+                    "genre": matched["genre"] if matched else "",
+                    "storeUrl": matched["storeUrl"] if matched else "",
                 }
             )
         with self.lock:
             self.games = games
+
+    def dir_signature(self):
+        signature = []
+        try:
+            for entry in sorted(self.games_dir.iterdir()):
+                if not entry.is_dir():
+                    continue
+                try:
+                    signature.append(
+                        (
+                            entry.name,
+                            (entry / "sce_sys" / "icon0.png").is_file(),
+                            any((entry / base / name).is_file() for base in ("sce_sys", ".") for name in PIC_NAMES),
+                            int((entry / "sce_sys" / "param.json").stat().st_mtime)
+                            if (entry / "sce_sys" / "param.json").is_file()
+                            else 0,
+                        )
+                    )
+                except OSError:
+                    continue
+        except OSError:
+            pass
+        return signature
+
+    def watch_library(self):
+        previous = self.dir_signature()
+        while True:
+            time.sleep(AUTO_SCAN_INTERVAL)
+            try:
+                current = self.dir_signature()
+            except OSError:
+                continue
+            if current != previous:
+                previous = current
+                self.scan()
 
     def showcase_entries(self):
         installed_titles = {normalize_title(game["title"]) for game in self.games}

@@ -258,6 +258,46 @@ class ServerTests(unittest.TestCase):
         self.assertIsNone(fresh["lastPlayed"])
         self.assertEqual(fresh["minutes"], 0.0)
 
+    def test_auto_scan_detects_dropped_folder(self):
+        original = server.AUTO_SCAN_INTERVAL
+        server.AUTO_SCAN_INTERVAL = 0.3
+        self.addCleanup(setattr, server, "AUTO_SCAN_INTERVAL", original)
+        fixture = self.spawn()
+        _, before = fixture.get("/api/games")
+        self.assertEqual(len(before["games"]), 2)
+        make_game(self.games, "late", "Late Arrival")
+        deadline = time.time() + 6.0
+        count = len(before["games"])
+        while time.time() < deadline:
+            _, payload = fixture.get("/api/games")
+            count = len(payload["games"])
+            if count > len(before["games"]):
+                break
+            time.sleep(0.3)
+        self.assertEqual(count, 3)
+
+    def test_dropped_game_inherits_showcase_art(self):
+        make_game(self.games, "demons", "Demon's Souls")
+        fixture = self.spawn()
+        _, payload = fixture.get("/api/games")
+        demons = next(item for item in payload["games"] if item["id"] == "demons")
+        self.assertTrue(demons["artUrl"].startswith("https://image.api.playstation.com/"))
+        self.assertEqual(demons["genre"], "Action")
+        self.assertTrue(demons["description"])
+        self.assertTrue(demons["storeUrl"].startswith("https://store.playstation.com/"))
+        showcase = next(entry for entry in payload["showcase"]["production"] if entry["title"] == "Demon's Souls")
+        self.assertTrue(showcase["installed"])
+        alpha = next(item for item in payload["games"] if item["id"] == "alpha")
+        self.assertIsNone(alpha["artUrl"])
+
+    def test_icon_folder_keeps_its_own_art(self):
+        folder = make_game(self.games, "demons2", "Demon's Souls", icon=True)
+        _ = folder
+        _, payload = self.spawn().get("/api/games")
+        demons = next(item for item in payload["games"] if item["id"] == "demons2")
+        self.assertIsNone(demons["artUrl"])
+        self.assertTrue(demons["hasIcon"])
+
     def test_payload_carries_showcase_catalog(self):
         fixture = self.spawn()
         _, payload = fixture.get("/api/games")

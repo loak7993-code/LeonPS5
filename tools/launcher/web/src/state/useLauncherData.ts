@@ -65,5 +65,17 @@ export function useLauncherData(demo: boolean): LibraryData {
     setLoadError(null);
   }, []);
 
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      api
+        .loadLibrary(false)
+        .then((next) => {
+          setLibrary((current) => (current && JSON.stringify(current) === JSON.stringify(next) ? current : next));
+        })
+        .catch(() => undefined);
+    }, 5000);
+    return () => window.clearInterval(id);
+  }, []);
+
   return { library, loadError, reload, apply };
 }

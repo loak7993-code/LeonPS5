@@ -11,8 +11,6 @@
 #include "Models.hpp"
 
 class ApiClient : public QObject {
-    Q_OBJECT
-
 public:
     explicit ApiClient(const QUrl &base, QObject *parent = nullptr);
 

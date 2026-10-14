@@ -3,8 +3,6 @@
 #include <QWidget>
 
 class StatsBar : public QWidget {
-    Q_OBJECT
-
 public:
     explicit StatsBar(QWidget *parent = nullptr);
 

@@ -4,14 +4,13 @@
 #include <QNetworkAccessManager>
 #include <QObject>
 #include <QPixmap>
+#include <functional>
 #include <QSize>
 #include <QUrl>
 
 // Downloads and caches cover art; answers every request synchronously with a
 // generated fallback and repaints the requester when the real art lands.
 class Covers : public QObject {
-    Q_OBJECT
-
 public:
     explicit Covers(QObject *parent = nullptr);
 
@@ -19,8 +18,7 @@ public:
     QPixmap coverFor(const QString &title, const QString &key, const QString &artUrl,
                      const QUrl &iconUrl, const QSize &size);
 
-signals:
-    void updated(const QString &key);
+    std::function<void(const QString &key)> onUpdate;
 
 private:
     QNetworkAccessManager manager_;

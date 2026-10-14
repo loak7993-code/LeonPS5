@@ -125,10 +125,22 @@ int main(int argc, char **argv)
         if (!alive) {
             QString serverScript = qEnvironmentVariable("LEONPS5_SERVER_SCRIPT");
             if (serverScript.isEmpty()) {
-                const QString candidate = QCoreApplication::applicationDirPath() + QStringLiteral("/../../server.py");
-                if (QFile::exists(candidate)) serverScript = candidate;
+                const QStringList candidates = {
+                    QCoreApplication::applicationDirPath() + QStringLiteral("/server.py"),
+                    QCoreApplication::applicationDirPath() + QStringLiteral("/../../server.py"),
+                };
+                for (const QString &candidate : candidates)
+                    if (QFile::exists(candidate)) {
+                        serverScript = candidate;
+                        break;
+                    }
             }
-            const QString python = QStandardPaths::findExecutable(QStringLiteral("python3"));
+            QString python = QStandardPaths::findExecutable(QStringLiteral("python3"));
+            if (python.isEmpty()) python = QStandardPaths::findExecutable(QStringLiteral("python"));
+            if (python.isEmpty()) {
+                const QString bundled = QCoreApplication::applicationDirPath() + QStringLiteral("/python/python.exe");
+                if (QFile::exists(bundled)) python = bundled;
+            }
             if (!python.isEmpty() && QFile::exists(serverScript)) {
                 server = new QProcess(&app);
                 server->setProgram(python);

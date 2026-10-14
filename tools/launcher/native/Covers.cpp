@@ -86,7 +86,7 @@ QPixmap Covers::coverFor(const QString &title, const QString &key, const QString
         if (downloaded.isNull()) return;
         const QPixmap scaled = downloaded.scaled(size, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
         cache_.insert(cacheKey, scaled);
-        emit updated(key);
+        if (onUpdate) onUpdate(key);
     });
     return fallback;
 }

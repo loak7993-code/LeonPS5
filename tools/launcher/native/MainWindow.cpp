@@ -52,7 +52,7 @@ MainWindow::MainWindow(ApiClient *api, QWidget *parent)
     : QMainWindow(parent), api_(api), covers_(new Covers(this))
 {
     covers_->setBaseUrl(api_->base());
-    connect(covers_, &Covers::updated, this, [this](const QString &key) {
+    covers_->onUpdate = [this](const QString &key) {
         for (int index = 0; index < rail_->count(); ++index) {
             QListWidgetItem *item = rail_->item(index);
             if (item && item->data(Qt::UserRole).toString() == key) {
@@ -61,7 +61,7 @@ MainWindow::MainWindow(ApiClient *api, QWidget *parent)
             }
         }
         update();
-    });
+    };
     buildUi();
     auto *poll = new QTimer(this);
     connect(poll, &QTimer::timeout, this, [this] { refresh(false); });

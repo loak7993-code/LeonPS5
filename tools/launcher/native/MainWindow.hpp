@@ -17,10 +17,9 @@ class QLineEdit;
 class QProcess;
 
 class MainWindow : public QMainWindow {
-    Q_OBJECT
-
 public:
     explicit MainWindow(ApiClient *api, QWidget *parent = nullptr);
+    void wireCoverUpdates();
 
     void setServerProcess(QProcess *process) { serverProcess_ = process; }
 

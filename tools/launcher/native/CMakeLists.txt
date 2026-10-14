@@ -3,7 +3,7 @@ project(leonps5-launcher-native LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOMOC OFF)
 
 find_package(Qt6 REQUIRED COMPONENTS Widgets Network)
 

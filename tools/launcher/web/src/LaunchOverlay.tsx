@@ -1,4 +1,4 @@
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { XCircle } from "@phosphor-icons/react";
 import { GameArt } from "./Art";
 import { Button } from "./ui/Button";
@@ -17,6 +17,7 @@ type LaunchOverlayProps = {
 };
 
 export function LaunchOverlay({ game, phase, error, command, onRetry, onClose }: LaunchOverlayProps) {
+  const reduced = useReducedMotion();
   return (
     <motion.div
       className="fixed inset-0 z-50 flex items-center justify-center bg-canvas/80 p-6 backdrop-blur-md"
@@ -29,9 +30,13 @@ export function LaunchOverlay({ game, phase, error, command, onRetry, onClose }:
         role="alertdialog"
         aria-label={phase === "error" ? "Could not start the title" : `Starting ${game.title}`}
         initial={{ opacity: 0, scale: 0.96, y: 14 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
+        animate={
+          phase === "error" && !reduced
+            ? { opacity: 1, scale: 1, y: 0, x: [0, -10, 10, -7, 7, -3, 0] }
+            : { opacity: 1, scale: 1, y: 0, x: 0 }
+        }
         exit={{ opacity: 0, scale: 0.98 }}
-        transition={{ type: "spring", stiffness: 320, damping: 28 }}
+        transition={phase === "error" && !reduced ? { duration: 0.45, ease: "easeInOut" } : { type: "spring", stiffness: 320, damping: 28 }}
         className="w-full max-w-md rounded-2xl border border-line bg-panel p-8 text-center"
       >
         {phase === "error" ? (
@@ -87,6 +92,45 @@ export function LaunchOverlay({ game, phase, error, command, onRetry, onClose }:
                   <GameArt id={game.id} title={game.title} className="h-full w-full" />
                 </motion.div>
               )}
+              <span className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center rounded-full border border-line bg-panel shadow-lg shadow-black/40">
+                {phase === "starting" ? (
+                  <motion.span
+                    key="spin"
+                    className="block h-5 w-5"
+                    initial={{ opacity: 0, scale: 0.6 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.6 }}
+                    transition={{ duration: 0.16 }}
+                  >
+                    <motion.span
+                      className="block h-5 w-5 rounded-full border-2 border-accent border-t-transparent"
+                      animate={reduced ? undefined : { rotate: 360 }}
+                      transition={reduced ? undefined : { repeat: Infinity, duration: 0.9, ease: "linear" }}
+                    />
+                  </motion.span>
+                ) : (
+                  <motion.svg
+                    key="check"
+                    viewBox="0 0 24 24"
+                    className="h-5 w-5 text-accent"
+                    fill="none"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ type: "spring", stiffness: 420, damping: 20 }}
+                  >
+                    <motion.path
+                      d="M5 12.5l4.5 4.5L19 7.5"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      initial={reduced ? { pathLength: 1 } : { pathLength: 0 }}
+                      animate={{ pathLength: 1 }}
+                      transition={{ duration: 0.3, delay: 0.05 }}
+                    />
+                  </motion.svg>
+                )}
+              </span>
             </div>
             <h2 className="mt-5 text-lg font-semibold">
               {phase === "starting" ? `Starting ${game.title}` : "Running in the background"}

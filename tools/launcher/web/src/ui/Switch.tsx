@@ -1,3 +1,4 @@
+import { motion, useReducedMotion } from "motion/react";
 import { cx } from "./cx";
 
 export type SwitchProps = {
@@ -8,6 +9,7 @@ export type SwitchProps = {
 };
 
 export function Switch({ label, checked, onChange, className }: SwitchProps) {
+  const reduced = useReducedMotion();
   return (
     <button
       type="button"
@@ -21,12 +23,15 @@ export function Switch({ label, checked, onChange, className }: SwitchProps) {
         className,
       )}
     >
-      <span
+      <motion.span
         aria-hidden
-        className={cx(
-          "absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform duration-200",
-          checked ? "translate-x-[1.375rem]" : "translate-x-0.5",
-        )}
+        className="absolute top-0.5 left-0 h-5 w-5 rounded-full bg-white"
+        animate={{ x: checked ? 22 : 2 }}
+        transition={
+          reduced
+            ? { duration: 0 }
+            : { type: "spring", stiffness: 480, damping: checked ? 13 : 17 }
+        }
       />
     </button>
   );

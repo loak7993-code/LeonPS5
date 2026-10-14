@@ -73,10 +73,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   "pointer-events-auto flex max-w-md items-center gap-2.5 rounded-full border px-4 py-2 text-sm shadow-lg",
                   entry.kind === "error" ? "border-danger/40 bg-panel text-text" : "border-line bg-panel text-text",
                 )}
-                initial={{ opacity: 0, y: 12, scale: 0.97 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: 8, scale: 0.97 }}
-                transition={{ duration: 0.18 }}
+                initial={{ opacity: 0, y: 14, scale: 0.96, filter: "blur(4px)" }}
+                animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
+                exit={{ opacity: 0, y: 8, scale: 0.97, filter: "blur(4px)" }}
+                transition={{ duration: 0.2, ease: [0.2, 0, 0, 1] }}
               >
                 {entry.kind === "error" && <WarningCircle size={16} weight="bold" className="text-danger" />}
                 <span className="min-w-0">{entry.message}</span>

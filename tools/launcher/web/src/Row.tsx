@@ -4,6 +4,7 @@ import { FolderOpen, Play, Stop } from "@phosphor-icons/react";
 import { GameArt } from "./Art";
 import { iconUrl, picUrl, type Game } from "./api";
 import { relativeTime } from "./data";
+import { PopValue } from "./ui/motion";
 
 const LEAD = 72;
 
@@ -55,11 +56,11 @@ function PlayStats({ game }: { game: Game }) {
   return (
     <div className="mt-4 flex items-end gap-5">
       <div>
-        <div className="font-mono text-sm font-semibold text-text">{total}</div>
+        <PopValue value={total} className="font-mono text-sm font-semibold text-text" />
         <div className="text-[11px] text-muted">played</div>
       </div>
       <div>
-        <div className="font-mono text-sm font-semibold text-text">{game.launches}</div>
+        <PopValue value={String(game.launches)} className="font-mono text-sm font-semibold text-text" />
         <div className="text-[11px] text-muted">launches</div>
       </div>
       <div className="flex h-8 items-end gap-[3px]" role="img" aria-label="Play time over the last seven days">
@@ -203,9 +204,9 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
               key={selected.id + "-info"}
               className="absolute z-10 pr-6 max-md:pr-3"
               style={{ top: infoAnchor.top, left: infoAnchor.left }}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0, transition: { duration: 0.22, ease: "easeOut" } }}
-              exit={{ opacity: 0, y: 8, transition: { duration: 0.14, ease: "easeIn" } }}
+              initial={{ opacity: 0, y: 12, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1, transition: { duration: 0.24, ease: [0.2, 0, 0, 1] } }}
+              exit={{ opacity: 0, y: 8, scale: 0.98, transition: { duration: 0.14, ease: "easeIn" } }}
             >
               <div className="relative w-[min(560px,calc(100vw-9rem))] max-md:w-[calc(100vw-7.5rem)] overflow-hidden rounded-[18px] border border-white/10 bg-panel/60 backdrop-blur-md">
                 <div aria-hidden className="absolute inset-0">
@@ -247,8 +248,19 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
                         onClick={() => onStop?.(selected)}
                         className="inline-flex h-12 items-center gap-2.5 rounded-xl bg-danger px-6 text-sm font-semibold text-canvas transition-transform hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-danger"
                       >
-                        <Stop size={18} weight="bold" />
-                        Stop
+                        <AnimatePresence mode="wait" initial={false}>
+                          <motion.span
+                            key="stop"
+                            className="inline-flex items-center gap-2.5"
+                            initial={{ opacity: 0, filter: "blur(4px)" }}
+                            animate={{ opacity: 1, filter: "blur(0px)" }}
+                            exit={{ opacity: 0, filter: "blur(4px)" }}
+                            transition={{ duration: 0.14 }}
+                          >
+                            <Stop size={18} weight="bold" />
+                            Stop
+                          </motion.span>
+                        </AnimatePresence>
                       </button>
                     ) : (
                       <button
@@ -256,8 +268,19 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
                         onClick={() => onPlay?.(selected)}
                         className="inline-flex h-12 items-center gap-2.5 rounded-xl bg-accent px-6 text-sm font-semibold text-white transition-transform hover:brightness-110 active:scale-[0.98] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
                       >
-                        <Play size={18} weight="bold" />
-                        Play
+                        <AnimatePresence mode="wait" initial={false}>
+                          <motion.span
+                            key="play"
+                            className="inline-flex items-center gap-2.5"
+                            initial={{ opacity: 0, filter: "blur(4px)" }}
+                            animate={{ opacity: 1, filter: "blur(0px)" }}
+                            exit={{ opacity: 0, filter: "blur(4px)" }}
+                            transition={{ duration: 0.14 }}
+                          >
+                            <Play size={18} weight="bold" />
+                            Play
+                          </motion.span>
+                        </AnimatePresence>
                       </button>
                     )}
                     <button

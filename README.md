@@ -1,5 +1,7 @@
 # LeonPS5
 
+![The LeonPS5 home launcher: the game rail, the info panel and a title starting](docs/media/launcher-preview.mp4)
+
 A tool that ports PlayStation 5 executables to run natively on Linux, Windows and macOS. It converts a game's ELF into a native executable of the host and provides native builds of the PS5's system libraries that the converted program links against. There is no emulation and no separate runtime process: the converted game runs as a normal program on your machine.
 
 A [relinker](core/relinker) converts the executable and its bundled modules to the target system's native format. Implementations of the [system prx libraries](core/libs/prx) provide the imports the converted program binds to at load time, each renamed to its NID so the OS loader resolves them without any patching.

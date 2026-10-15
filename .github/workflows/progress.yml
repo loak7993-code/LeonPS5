@@ -23,6 +23,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - run: python3 tools/progress.py out
+      - run: |
+          mkdir -p out/media
+          cp docs/media/* out/media/
       - uses: actions/upload-pages-artifact@v5
         with:
           path: out

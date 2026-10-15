@@ -1,6 +1,8 @@
 # LeonPS5
 
-![LeonPS5 launcher preview](docs/media/launcher-preview.mp4)
+![The LeonPS5 home launcher: browsing the game rail](docs/media/launcher-preview.gif)
+
+[Full 59-second preview](https://loak7993-code.github.io/LeonPS5/media/launcher-preview.mp4)
 
 A tool that ports PlayStation 5 executables to run natively on Linux, Windows and macOS. It converts a game's ELF into a native executable of the host and provides native builds of the PS5's system libraries that the converted program links against. There is no emulation and no separate runtime process: the converted game runs as a normal program on your machine.
 

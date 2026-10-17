@@ -143,7 +143,7 @@ export function Background({ game, blur = 64, opacity = 55, waveOpacity = 100 }:
         className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(180deg, rgba(7,11,28,0.55) 0%, rgba(7,11,28,0.25) 40%, rgba(7,11,28,0.82) 100%)",
+            "linear-gradient(180deg, rgba(8,8,10,0.55) 0%, rgba(8,8,10,0.25) 40%, rgba(8,8,10,0.82) 100%)",
         }}
       />
       <GlowHaze />

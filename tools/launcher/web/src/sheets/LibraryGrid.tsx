@@ -60,7 +60,7 @@ export function GridSheet({ games, index, onIndex, onActivate, onClose }: GridSh
                 className={`relative block aspect-square w-full overflow-hidden rounded-xl bg-panel2 ${
                   position === index
                     ? "shadow-[0_0_0_2px_rgba(255,255,255,0.88)]"
-                    : "shadow-[0_0_0_1px_rgba(151,163,224,0.12)]"
+                    : "shadow-[0_0_0_1px_rgba(255,255,255,0.1)]"
                 }`}
               >
                 {game.hasIcon ? (

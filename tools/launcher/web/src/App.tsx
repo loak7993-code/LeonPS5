@@ -86,7 +86,7 @@ function Launcher() {
   const [gestured, setGestured] = useState(false);
   const glow = (prefs.accentGlow ? (prefs.glowIntensity / 100) * 0.14 : 0);
   const glowColorA = tint ?? "#2f6bff";
-  const glowColorB = tint ?? "#3fa9c9";
+  const glowColorB = tint ?? "#5c8bff";
   const waveOp = prefs.waveOpacity / 100;
   const { toast } = useToast();
   const searchRef = useRef<HTMLInputElement>(null);

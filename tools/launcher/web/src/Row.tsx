@@ -189,7 +189,7 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
               animate={{ opacity: 1, y: 0, x: titleX, transition: { duration: 0.16, ease: "easeOut" } }}
               exit={{ opacity: 0, y: 6, transition: { duration: 0.12, ease: "easeIn" } }}
             >
-              <h1 className="truncate text-[30px] font-semibold tracking-tight max-md:text-[22px]">
+              <h1 className="truncate text-[30px] font-semibold tracking-tight max-md:text-[22px] max-md:whitespace-normal max-md:break-words max-md:line-clamp-2">
                 {selected.title}
               </h1>
               <p className="mt-1 truncate font-mono text-xs text-muted">
@@ -241,7 +241,7 @@ export function Rail({ games, index, searching, onSelect, onActivate, gap: gapPr
                     className="absolute inset-0"
                     style={{
                       background:
-                        "linear-gradient(180deg, rgba(5,8,20,0.6) 0%, rgba(5,8,20,0.28) 36%, rgba(5,8,20,0.9) 100%)",
+                        "linear-gradient(180deg, rgba(8,8,10,0.6) 0%, rgba(8,8,10,0.28) 36%, rgba(8,8,10,0.9) 100%)",
                     }}
                   />
                 </div>

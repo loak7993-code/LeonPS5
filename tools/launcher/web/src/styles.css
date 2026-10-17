@@ -15,14 +15,14 @@
 @import "tailwindcss";
 
 @theme {
-  --color-canvas: #070b1c;
-  --color-panel: #0e1533;
-  --color-panel2: #141d42;
-  --color-line: rgba(151, 163, 224, 0.14);
+  --color-canvas: #060608;
+  --color-panel: #101014;
+  --color-panel2: #17181c;
+  --color-line: rgba(255, 255, 255, 0.09);
   --color-accent: #2f6bff;
   --color-danger: #ff6b6e;
-  --color-text: #eef1ff;
-  --color-muted: #9aa6d4;
+  --color-text: #f2f3f5;
+  --color-muted: #989da6;
   --font-sans: "Geist Sans", "Segoe UI", system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
 }
@@ -64,7 +64,7 @@ body {
 }
 
 .card-idle {
-  box-shadow: 0 0 0 1px rgba(151, 163, 224, 0.12);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
 }
 
 @keyframes drift {

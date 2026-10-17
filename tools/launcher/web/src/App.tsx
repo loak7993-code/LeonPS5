@@ -24,7 +24,7 @@ import { GridSheet } from "./sheets/LibraryGrid";
 import { AboutSheet, PowerSheet } from "./sheets/AboutPower";
 import { Onboarding } from "./Onboarding";
 import { lazy, Suspense } from "react";
-import { usePrefs } from "./prefs";
+import { usePrefs, ACCENT_HEX } from "./prefs";
 import { startAmbience, stopAmbience, unlock, setVolume } from "./ambience";
 
 const Gallery = lazy(() => import("./Gallery"));
@@ -85,8 +85,8 @@ function Launcher() {
   const [prefs, setPref] = usePrefs();
   const [gestured, setGestured] = useState(false);
   const glow = (prefs.accentGlow ? (prefs.glowIntensity / 100) * 0.14 : 0);
-  const glowColorA = tint ?? "#2f6bff";
-  const glowColorB = tint ?? "#5c8bff";
+  const glowColorA = tint ?? ACCENT_HEX[prefs.accent];
+  const glowColorB = tint ?? ACCENT_HEX[prefs.accent];
   const waveOp = prefs.waveOpacity / 100;
   const { toast } = useToast();
   const searchRef = useRef<HTMLInputElement>(null);

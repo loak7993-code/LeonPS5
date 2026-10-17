@@ -36,6 +36,8 @@ const ACCENTS: Record<Accent, string> = {
   red: "#e0524f",
 };
 
+export const ACCENT_HEX = ACCENTS;
+
 export const CARD_GAPS: Record<Prefs["cardGap"], string> = {
   compact: "10px",
   normal: "18px",

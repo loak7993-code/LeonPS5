@@ -16,16 +16,7 @@ import { Segmented } from "../ui/Segmented";
 import { Switch } from "../ui/Switch";
 import { TextField } from "../ui/TextField";
 import type { Library } from "../api";
-import type { Accent, Prefs } from "../prefs";
-
-const ACCENTS: Accent[] = ["blue", "cyan", "emerald", "orange", "red"];
-const ACCENT_HEX: Record<Accent, string> = {
-  blue: "#2f6bff",
-  cyan: "#2bb8d6",
-  emerald: "#2fb87a",
-  orange: "#e08a3c",
-  red: "#e0524f",
-};
+import { ACCENT_HEX, type Accent, type Prefs } from "../prefs";
 
 type Section = "appearance" | "sound" | "library" | "about";
 
@@ -176,7 +167,7 @@ export function SettingsPage({
               <h2 className="mb-6 text-lg font-semibold">Appearance</h2>
               <SettingsRow label="Accent color" hint="Applies across the launcher">
                 <div className="flex items-center gap-2.5">
-                  {ACCENTS.map((accent) => (
+                  {(Object.keys(ACCENT_HEX) as Accent[]).map((accent) => (
                     <button
                       key={accent}
                       type="button"

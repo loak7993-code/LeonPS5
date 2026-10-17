@@ -220,7 +220,7 @@ export function SettingsPage({
               })}
             </div>
           </nav>
-          <div className="min-h-0 flex-1 overflow-y-auto pb-6">
+          <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto pb-6">
             <AnimatePresence mode="wait" initial={false}>
               {section === "appearance" && (
                 <motion.div

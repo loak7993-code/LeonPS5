@@ -44,7 +44,7 @@ export function GridSheet({ games, index, onIndex, onActivate, onClose }: GridSh
       wide
       title={`Library · ${games.length} ${games.length === 1 ? "title" : "titles"}`}
     >
-      <div className="max-h-[62vh] overflow-y-auto p-6">
+      <div className="no-scrollbar max-h-[62vh] overflow-y-auto p-6">
         <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(158px, 1fr))" }}>
           {games.map((game, position) => (
             <button

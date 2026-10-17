@@ -303,7 +303,7 @@ function GalleryBody() {
 export default function Gallery() {
   return (
     <motion.div
-      className="h-full overflow-y-auto"
+      className="no-scrollbar h-full overflow-y-auto"
       style={{ background: "var(--color-canvas)" }}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}

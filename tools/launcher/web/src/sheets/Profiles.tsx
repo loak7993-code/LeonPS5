@@ -5,9 +5,10 @@ import { Dialog } from "../ui/Dialog";
 import { IconButton } from "../ui/IconButton";
 import { TextField } from "../ui/TextField";
 import type { Library, Profile, ProfileAction } from "../api";
+import { ACCENT_HEX } from "../prefs";
 import { confirm as confirmSound } from "../sounds";
 
-const AVATAR_COLORS = ["#2f6bff", "#2bb8d6", "#2fb87a", "#e08a3c", "#e0524f"];
+const AVATAR_COLORS = Object.values(ACCENT_HEX);
 
 function avatarColor(id: string): string {
   let value = 0;

@@ -29,11 +29,11 @@ export type Prefs = {
 const KEY = "leonps5-launcher-prefs";
 
 const ACCENTS: Record<Accent, string> = {
-  blue: "#2f6bff",
-  cyan: "#2bb8d6",
-  emerald: "#2fb87a",
-  orange: "#e08a3c",
-  red: "#e0524f",
+  blue: "#2d66f2",
+  cyan: "#1c788b",
+  emerald: "#218155",
+  orange: "#9d612a",
+  red: "#be4643",
 };
 
 export const ACCENT_HEX = ACCENTS;

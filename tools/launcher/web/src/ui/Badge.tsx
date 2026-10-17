@@ -8,9 +8,9 @@ export type BadgeProps = {
 
 const TONES: Record<NonNullable<BadgeProps["tone"]>, string> = {
   neutral: "bg-white/10 text-muted",
-  accent: "bg-accent/15 text-accent",
+  accent: "bg-accent/15 text-text",
   danger: "bg-danger/15 text-danger",
-  success: "bg-accent/15 text-accent",
+  success: "bg-accent/20 text-text",
 };
 
 export function Badge({ tone = "neutral", children, className }: BadgeProps) {

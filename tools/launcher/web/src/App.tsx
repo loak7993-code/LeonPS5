@@ -456,6 +456,7 @@ function Launcher() {
         blur={infoMode ? Math.min(prefs.backdropBlur, 24) : prefs.backdropBlur}
         opacity={infoMode ? Math.max(prefs.backdropOpacity, 70) : prefs.backdropOpacity}
         waveOpacity={waveOp}
+        waveSpeed={prefs.waveSpeed}
       />
       <TopBar
         ref={searchRef}

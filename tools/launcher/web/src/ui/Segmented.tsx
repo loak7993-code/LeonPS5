@@ -57,8 +57,8 @@ export function Segmented<T extends string>({ label, value, options, onChange, c
               }
             }}
             className={cx(
-              "h-8 rounded-md px-3 text-xs transition-colors",
-              selected ? "bg-accent text-white" : "text-muted hover:text-text",
+              "h-11 min-w-[44px] rounded-md px-4 text-sm transition-colors",
+              selected ? "bg-accent text-white" : "text-text/75 hover:text-text",
             )}
           >
             {option.label}

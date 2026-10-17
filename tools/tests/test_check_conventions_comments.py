@@ -73,7 +73,7 @@ class SilentStubTests(unittest.TestCase):
             git("commit", "-qm", "feat: add example export")
             result = subprocess.run(
                 [sys.executable, str(checker), "--base", "HEAD~1"],
-                cwd=root, capture_output=True, text=True,
+                cwd=root, capture_output=True, text=True, check=False,
                 env={key: value for key, value in os.environ.items()
                      if key not in ("GITHUB_EVENT_PATH", "GITHUB_STEP_SUMMARY", "GITHUB_ACTIONS")},
             )

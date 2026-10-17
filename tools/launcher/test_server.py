@@ -1,18 +1,17 @@
 import json
 import shutil
 import struct
-import subprocess
 import sys
 import tempfile
-import unittest
 import time
+import unittest
 import urllib.request
 import zlib
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import server  # noqa: E402
+import server
 
 
 def tiny_png(rgb):
@@ -122,7 +121,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(beta["description"], "")
 
     def test_description_caps_long_readme(self):
-        folder = make_game(self.games, "gamma", "Gamma Wave", readme="word " * 200)
+        make_game(self.games, "gamma", "Gamma Wave", readme="word " * 200)
         status, payload = self.spawn().get("/api/games")
         self.assertEqual(status, 200)
         gamma = next(item for item in payload["games"] if item["id"] == "gamma")
@@ -242,7 +241,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(alpha["lastPlayed"], "2026-01-02T03:04:05Z")
         self.assertEqual(alpha["minutes"], 5.5)
         self.assertEqual(alpha["launches"], 2)
-        status, body = fixture.post("/api/profile", {"action": "create", "name": "Fresh"})
+        _, body = fixture.post("/api/profile", {"action": "create", "name": "Fresh"})
         fresh = next(item for item in body["games"] if item["id"] == "alpha")
         self.assertIsNone(fresh["lastPlayed"])
         self.assertEqual(fresh["minutes"], 0.0)
@@ -475,7 +474,7 @@ class ServerTests(unittest.TestCase):
 
         server.run_setup = fake_setup
         self.addCleanup(setattr, server, "run_setup", original)
-        status, body = fixture.post("/api/setup/install")
+        status, _ = fixture.post("/api/setup/install")
         self.assertEqual(status, 200)
         for _ in range(50):
             _, progress = fixture.get("/api/setup/status")

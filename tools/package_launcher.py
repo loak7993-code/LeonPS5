@@ -8,6 +8,10 @@ import tempfile
 import urllib.request
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent / "launcher"))
+
+from brand import ICON_512_PNG_BASE64, ICON_ICO_BASE64
+
 LAUNCHER_DIR = Path(__file__).resolve().parent / "launcher"
 WEB_DIR = LAUNCHER_DIR / "web"
 DIST_DIR = WEB_DIR / "dist"
@@ -15,11 +19,6 @@ APPIMAGE_TOOL_URL = (
     "https://github.com/AppImage/AppImageKit/releases/download/continuous/"
     "appimagetool-x86_64.AppImage"
 )
-_LAUNCHER_ROOT = str(Path(__file__).resolve().parent / "launcher")
-if _LAUNCHER_ROOT not in sys.path:
-    sys.path.insert(0, _LAUNCHER_ROOT)
-
-from brand import ICON_512_PNG_BASE64, ICON_ICO_BASE64  # noqa: E402
 
 
 def write_brand_icon(path):

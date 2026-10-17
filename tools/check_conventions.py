@@ -38,7 +38,7 @@ SYSTEM_DEPENDENCY = re.compile(r"\b(find_package\s*\((?!\s*(Python3|Threads|Git)
 TITLE = re.compile(r"\b(PPSA|CUSA)\d{5}\b")
 EXTENSION = re.compile(r"__attribute__|__declspec|#\s*pragma\s+(?!once\b)")
 LINK = re.compile(r"\]\(([^)\s]+)")
-SECTION = re.compile(r"^###\s*(.+?)\s*$", re.M)
+SECTION = re.compile(r"^###\s*(.+?)\s*$", re.MULTILINE)
 
 
 def git(*args, text=True):
@@ -116,7 +116,7 @@ class Check:
         if not exports:
             return
         pattern = r"\bAPS5_VABI\s+(" + "|".join(exports) + r")\s*\("
-        result = subprocess.run(["git", "grep", "-nE", pattern, self.head, "--", "core/libs/prx"], capture_output=True, encoding="utf-8", errors="replace")
+        result = subprocess.run(["git", "grep", "-nE", pattern, self.head, "--", "core/libs/prx"], capture_output=True, encoding="utf-8", errors="replace", check=False)
         for line in result.stdout.splitlines():
             _, path, _, text = line.split(":", 3)
             name = EXPORT.search(text).group(1)
@@ -160,17 +160,17 @@ class Check:
     def pull_request(self, title, body):
         if not CONVENTIONAL.match(title):
             self.report("pr-title", "", 0, title)
-        body = re.sub(r"<!--.*?-->", "", body or "", flags=re.S)
+        body = re.sub(r"<!--.*?-->", "", body or "", flags=re.DOTALL)
         sections = dict(zip(SECTION.findall(body), SECTION.split(body)[2::2]))
         for name in ("What", "Tested", "Checklist"):
             if not sections.get(name, "").strip():
                 self.report("pr-template", "", 0, f"section '{name}' is missing or empty")
         checklist = sections.get("Checklist", "")
-        for item in re.findall(r"^\s*-\s*\[ \]\s*(.+)$", checklist, re.M):
+        for item in re.findall(r"^\s*-\s*\[ \]\s*(.+)$", checklist, re.MULTILINE):
             self.report("pr-template", "", 0, f"unchecked: {item.strip()}")
-        if checklist and not re.search(r"AI-assisted:\s*(yes|no)\b", checklist, re.I):
+        if checklist and not re.search(r"AI-assisted:\s*(yes|no)\b", checklist, re.IGNORECASE):
             self.report("pr-template", "", 0, "answer AI-assisted with yes or no")
-        if checklist and not re.search(r"Depends on:\s*(#\d+|none)\b", checklist, re.I):
+        if checklist and not re.search(r"Depends on:\s*(#\d+|none)\b", checklist, re.IGNORECASE):
             self.report("pr-template", "", 0, "fill Depends on with #N or none")
 
 
@@ -216,7 +216,7 @@ def allowed_notes(path):
 
 def function_body(lines, start):
     text = "\n".join(lines[start:start + 400])
-    text = re.sub(r"//[^\r\n]*|/\*.*?\*/", "", STRINGS.sub('""', text), flags=re.S)
+    text = re.sub(r"//[^\r\n]*|/\*.*?\*/", "", STRINGS.sub('""', text), flags=re.DOTALL)
     brace, semicolon = text.find("{"), text.find(";")
     if brace < 0 or 0 <= semicolon < brace:
         return None
@@ -274,9 +274,14 @@ if __name__ == "__main__":
     check.repository()
     check.docs()
     check.commits()
-    pr = json.load(open(args.event, encoding="utf-8")).get("pull_request") if args.event else None
+    pr = None
+    if args.event:
+        with open(args.event, encoding="utf-8") as handle:
+            pr = json.load(handle).get("pull_request")
     if pr:
         check.pull_request(pr["title"], pr["body"])
     elif args.title is not None or args.body:
-        check.pull_request(args.title or "", open(args.body, encoding="utf-8").read() if args.body else "")
+        with open(args.body, encoding="utf-8") as handle:
+            body = handle.read()
+        check.pull_request(args.title or "", body if args.body else "")
     raise SystemExit(output(check, os.environ.get("GITHUB_REPOSITORY", "loak7993-code/LeonPS5")))

@@ -13,8 +13,8 @@ ISA = Path(__file__).resolve().parent / "rdna_isa.txt"
 SOURCE = f'https://github.com/{os.environ.get("GITHUB_REPOSITORY", "loak7993-code/LeonPS5")}/blob/main'
 DEFINITION = re.compile(r"\bAPS5_VABI\s+(\w+)\s*\([^;{]*\)\s*(?:noexcept\s*)?(?:try\s*)?\{")
 STUB = "NotImplemented_nid_no_patch"
-CMAKE_SHARED = re.compile(r'^\s*include\(\s*"?\$\{CMAKE_CURRENT_SOURCE_DIR\}/\.\./([\w.-]+)/[\w.-]+\.cmake"?\s*\)', re.M)
-SOURCE_SHARED = re.compile(r'^\s*#\s*include\s*"prx/([\w.-]+)/[\w./-]+\.cpp"', re.M)
+CMAKE_SHARED = re.compile(r'^\s*include\(\s*"?\$\{CMAKE_CURRENT_SOURCE_DIR\}/\.\./([\w.-]+)/[\w.-]+\.cmake"?\s*\)', re.MULTILINE)
+SOURCE_SHARED = re.compile(r'^\s*#\s*include\s*"prx/([\w.-]+)/[\w./-]+\.cpp"', re.MULTILINE)
 STUB_WRAPPER = re.compile(r"\bstatic\s+(?:\[\[noreturn\]\]\s+)?void\s+(\w+)\s*\([^;{]*\)\s*\{")
 FLAT_SEGMENTS = ("GLOBAL_", "SCRATCH_")
 OPCODE_SENTINELS = {"Invalid", "Count", "Unknown", "Unsupported"}
@@ -130,8 +130,8 @@ def collect_shaders():
             name, encoding = line.split()
             isa[name] = encoding
     by_camel = {camel(name): name for name in isa}
-    enum = re.search(r"enum class RdnaOpcode[^{]*\{(.*?)\};", OPCODES.read_text(), re.S).group(1)
-    opcodes = [o for o in re.findall(r"^\s*([A-Z]\w*)\s*[,=]", enum, re.M) if o not in OPCODE_SENTINELS]
+    enum = re.search(r"enum class RdnaOpcode[^{]*\{(.*?)\};", OPCODES.read_text(), re.DOTALL).group(1)
+    opcodes = [o for o in re.findall(r"^\s*([A-Z]\w*)\s*[,=]", enum, re.MULTILINE) if o not in OPCODE_SENTINELS]
     supported, extra = set(), []
     for opcode in opcodes:
         supported.update(name for name in OPCODE_VARIANTS.get(opcode, ()) if name in isa)

@@ -9,7 +9,6 @@ from unittest.mock import patch
 
 import hw_oracle
 
-
 MODES = dict(ieee=0, denorm32=0, denorm16=3, dx10_clamp=1, round32=0, round16=0, fp16_overflow=0)
 
 
@@ -164,7 +163,7 @@ class AssemblyTests(unittest.TestCase):
                 hw_oracle.tool(name)
             except SystemExit as error:
                 self.skipTest(str(error))
-        targets = subprocess.run([hw_oracle.tool("clang"), "--print-targets"], capture_output=True, text=True).stdout
+        targets = subprocess.run([hw_oracle.tool("clang"), "--print-targets"], capture_output=True, text=True, check=False).stdout
         if "amdgcn" not in targets:
             self.skipTest("clang has no AMDGPU target")
         for wave64, vcc, sgpr in ((False, "vcc_lo", "s8"), (True, "vcc", "s[8:9]")):

@@ -5,9 +5,9 @@ import sys
 from pathlib import Path
 
 try:
-    from tools.nid_names import CHARSET, SUFFIX, compute_nid
+    from tools.nid_names import compute_nid
 except ImportError:
-    from nid_names import CHARSET, SUFFIX, compute_nid
+    from nid_names import compute_nid
 
 
 def strip_nid_token(raw):

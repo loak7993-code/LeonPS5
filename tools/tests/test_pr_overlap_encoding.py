@@ -1,10 +1,10 @@
-from contextlib import contextmanager
 import json
-from pathlib import Path
 import subprocess
 import sys
-from tempfile import TemporaryDirectory
 import unittest
+from contextlib import contextmanager
+from pathlib import Path
+from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))

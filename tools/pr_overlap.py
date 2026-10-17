@@ -10,7 +10,7 @@ from urllib.parse import urlencode
 PARENT = 'if .parent then "\\(.parent.owner.login)/\\(.parent.name)" else .nameWithOwner end'
 EXPORT = re.compile(r"^\+.*\bAPS5_VABI\s+(\w+)\s*\(")
 DEPENDS = re.compile(r'Depends on:([^\r\n]*(?:\r?\n[ \t]*[-*][ \t]*#\d+[^\r\n]*)*)')
-HUNK = re.compile(r"^@@ -(\d+)(?:,(\d+))?", re.M)
+HUNK = re.compile(r"^@@ -(\d+)(?:,(\d+))?", re.MULTILINE)
 MARKER = "<!-- pr-overlap -->"
 
 
@@ -48,7 +48,7 @@ def fetch(base, prs):
 
 def merge(*args):
     result = subprocess.run(["git", "merge-tree", "--write-tree", "--name-only", "--no-messages", *args],
-                            capture_output=True, text=True, encoding="utf-8")
+                            capture_output=True, text=True, encoding="utf-8", check=False)
     lines = result.stdout.splitlines()
     if result.returncode not in (0, 1) or not lines:
         raise RuntimeError(f"git merge-tree {' '.join(args)} failed: {result.stderr.strip()}")

@@ -57,7 +57,7 @@ STEPS = [
 def main() -> int:
     for index, command in enumerate(STEPS, start=1):
         print(f"== [{index}/{len(STEPS)}] {command[:120]}", flush=True)
-        result = subprocess.run(command, shell=True, text=True)
+        result = subprocess.run(command, shell=True, text=True, check=False)
         if result.returncode != 0 and index not in (3, 9, 10):
             # Steps 3, 9 and 10 already carry their own `|| true` semantics for
             # reporting; anything else failing stops the kernel.

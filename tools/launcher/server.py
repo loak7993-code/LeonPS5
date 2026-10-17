@@ -932,7 +932,7 @@ def run_setup(web_source, games_dir, node_hint=None):
         try:
             node = ensure_node(log) if node is None else (log(f"Node.js found: {node}") or node)
             done_step(0)
-        except Exception as error:
+        except Exception:
             done_step(0, ok=False)
             raise
 
@@ -1289,16 +1289,8 @@ def synth_ambience(path, seconds=48, rate=44100):
         peak = max(peak, abs(left[index]), abs(right[index]))
     gain = 0.42 / peak if peak > 0 else 1.0
     for index in range(total):
-        left[index] *= gain
-        right[index] *= gain
-        if left[index] > 1.0:
-            left[index] = 1.0
-        if left[index] < -1.0:
-            left[index] = -1.0
-        if right[index] > 1.0:
-            right[index] = 1.0
-        if right[index] < -1.0:
-            right[index] = -1.0
+        left[index] = max(-1.0, min(1.0, left[index] * gain))
+        right[index] = max(-1.0, min(1.0, right[index] * gain))
 
     with wave.open(str(path), "wb") as handle:
         handle.setnchannels(2)
